@@ -7,19 +7,24 @@ import {
   Alert,
   Platform,
   StyleSheet,
+  TextInput,
+  Share,
 } from 'react-native';
 import { Stack, useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { FieldSettingRow } from '@/components/FieldSettingRow';
 import { AddFieldModal } from '@/components/AddFieldModal';
 import { useFieldSettings } from '@/store/useFieldSettings';
 import { useReviews } from '@/store/useReviews';
+import { useSyncKey } from '@/store/useSyncKey';
 import { FieldType, Review, FieldSetting } from '@/types';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
-import { colors, spacing, borderRadius, shadows, typography } from '@/theme';
+import { useTheme, colors, spacing, borderRadius, shadows, typography } from '@/theme';
 
 export default function SettingsScreen() {
+  const { colors } = useTheme();
   const {
     fieldSettings,
     loading,
@@ -30,7 +35,11 @@ export default function SettingsScreen() {
     reload,
   } = useFieldSettings();
   const { syncFieldsToReviews } = useReviews(fieldSettings);
+  const { syncKey, changeSyncKey } = useSyncKey();
   const [modalVisible, setModalVisible] = useState(false);
+  const [showKeyInput, setShowKeyInput] = useState(false);
+  const [keyInputValue, setKeyInputValue] = useState('');
+  const [keyCopied, setKeyCopied] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -180,6 +189,33 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleCopyKey = async () => {
+    if (!syncKey) return;
+    try {
+      if (Platform.OS === 'web') {
+        await (navigator as any).clipboard?.writeText(syncKey);
+      } else {
+        await Share.share({ message: syncKey });
+      }
+      setKeyCopied(true);
+      setTimeout(() => setKeyCopied(false), 2000);
+    } catch (e) {
+      console.warn('Copy failed', e);
+    }
+  };
+
+  const handleChangeKey = async () => {
+    if (!keyInputValue.trim()) return;
+    await changeSyncKey(keyInputValue.trim());
+    setShowKeyInput(false);
+    setKeyInputValue('');
+    if (Platform.OS === 'web') {
+      window.alert('Sync key updated! Your data will sync with that key.');
+    } else {
+      Alert.alert('Sync Key Updated', 'Your data will now sync with that key.');
+    }
+  };
+
   const sortedSettings = [...fieldSettings].sort((a, b) => a.order - b.order);
 
   return (
@@ -204,7 +240,7 @@ export default function SettingsScreen() {
               Configure the fields that appear on every review. Adding or removing a field affects all reviews.
             </Text>
 
-            <View style={styles.fieldList}>
+            <View style={[styles.fieldList, { backgroundColor: colors.surface }]}>
               {sortedSettings.map((setting, index) => (
                 <FieldSettingRow
                   key={setting.id}
@@ -223,23 +259,79 @@ export default function SettingsScreen() {
               onPress={() => setModalVisible(true)}
               style={({ pressed }) => [
                 styles.addButton,
+                { borderColor: colors.primary, backgroundColor: colors.primaryLight },
                 pressed && styles.addButtonPressed,
               ]}
             >
-              <Text style={styles.addButtonIcon}>+</Text>
-              <Text style={styles.addButtonText}>Add Field</Text>
+              <Text style={[styles.addButtonIcon, { color: colors.primary }]}>+</Text>
+              <Text style={[styles.addButtonText, { color: colors.primary }]}>Add Field</Text>
             </Pressable>
 
-            <View style={styles.dataSection}>
-              <Text style={styles.dataTitle}>Data Management</Text>
-              <Text style={styles.dataDesc}>Note: Photos are not included in the JSON export.</Text>
+            {/* ── Sync Section ───────────────────────────────────────────── */}
+            <View style={[styles.syncSection, { borderTopColor: colors.borderLight }]}>
+              <View style={styles.syncHeader}>
+                <Text style={[styles.dataTitle, { color: colors.text }]}>Data Sync</Text>
+                <View style={[styles.syncBadge, { backgroundColor: colors.success + '22' }]}>
+                  <View style={[styles.syncDot, { backgroundColor: colors.success }]} />
+                  <Text style={[styles.syncBadgeText, { color: colors.success }]}>Active</Text>
+                </View>
+              </View>
+              <Text style={[styles.dataDesc, { color: colors.textSecondary }]}>
+                Use this key to sync your data across devices. Enter it on another device to pull your reviews.
+              </Text>
+
+              <View style={[styles.keyBox, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
+                <Text style={[styles.keyText, { color: colors.text }]} numberOfLines={1} selectable>
+                  {syncKey || 'Generating…'}
+                </Text>
+                <Pressable onPress={handleCopyKey} style={styles.copyBtn} hitSlop={8}>
+                  <Ionicons
+                    name={keyCopied ? 'checkmark-circle' : 'copy-outline'}
+                    size={20}
+                    color={keyCopied ? colors.success : colors.primary}
+                  />
+                </Pressable>
+              </View>
+
+              {!showKeyInput ? (
+                <Pressable
+                  onPress={() => { setShowKeyInput(true); setKeyInputValue(''); }}
+                  style={[styles.changeKeyBtn, { borderColor: colors.border }]}
+                >
+                  <Text style={[styles.changeKeyText, { color: colors.textSecondary }]}>Enter a different sync key…</Text>
+                </Pressable>
+              ) : (
+                <View style={styles.keyInputRow}>
+                  <TextInput
+                    style={[styles.keyInput, { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.border }]}
+                    value={keyInputValue}
+                    onChangeText={setKeyInputValue}
+                    placeholder="Paste sync key here"
+                    placeholderTextColor={colors.textTertiary}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <Pressable onPress={handleChangeKey} style={[styles.keyApplyBtn, { backgroundColor: colors.primary }]}>
+                    <Text style={styles.keyApplyText}>Apply</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setShowKeyInput(false)} style={styles.keyCancelBtn}>
+                    <Ionicons name="close" size={20} color={colors.textSecondary} />
+                  </Pressable>
+                </View>
+              )}
+            </View>
+
+            {/* ── Data Management ────────────────────────────────────────── */}
+            <View style={[styles.dataSection, { borderTopColor: colors.borderLight }]}>
+              <Text style={[styles.dataTitle, { color: colors.text }]}>Data Management</Text>
+              <Text style={[styles.dataDesc, { color: colors.textSecondary }]}>Note: Photos are not included in the JSON export.</Text>
               
               <View style={styles.dataButtons}>
-                <Pressable style={styles.dataBtn} onPress={handleExport}>
-                  <Text style={styles.dataBtnText}>Export Data</Text>
+                <Pressable style={[styles.dataBtn, { backgroundColor: colors.surfaceSecondary }]} onPress={handleExport}>
+                  <Text style={[styles.dataBtnText, { color: colors.text }]}>Export Data</Text>
                 </Pressable>
-                <Pressable style={styles.dataBtn} onPress={handleImport}>
-                  <Text style={styles.dataBtnText}>Import Data</Text>
+                <Pressable style={[styles.dataBtn, { backgroundColor: colors.surfaceSecondary }]} onPress={handleImport}>
+                  <Text style={[styles.dataBtnText, { color: colors.text }]}>Import Data</Text>
                 </Pressable>
               </View>
             </View>
@@ -259,7 +351,6 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -268,7 +359,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     ...typography.body,
-    color: colors.textTertiary,
   },
   scrollView: {
     flex: 1,
@@ -283,7 +373,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   fieldList: {
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
     ...shadows.sm,
@@ -297,27 +386,106 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md + 2,
     borderRadius: borderRadius.lg,
     borderWidth: 2,
-    borderColor: colors.primary,
     borderStyle: 'dashed',
-    backgroundColor: colors.primaryLight,
   },
   addButtonPressed: {
     opacity: 0.8,
   },
   addButtonIcon: {
     fontSize: 18,
-    color: colors.primary,
     fontWeight: '600',
   },
   addButtonText: {
     ...typography.bodyMedium,
-    color: colors.primary,
   },
+  // Sync section
+  syncSection: {
+    marginTop: spacing.xxxl,
+    paddingTop: spacing.xl,
+    borderTopWidth: 1,
+  },
+  syncHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  syncBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 3,
+    borderRadius: borderRadius.full,
+  },
+  syncDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  syncBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  keyBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  keyText: {
+    flex: 1,
+    fontFamily: 'monospace',
+    fontSize: 13,
+  },
+  copyBtn: {
+    padding: spacing.xs,
+  },
+  changeKeyBtn: {
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    borderStyle: 'dashed',
+  },
+  changeKeyText: {
+    fontSize: 14,
+  },
+  keyInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  keyInput: {
+    flex: 1,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: 14,
+  },
+  keyApplyBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+  },
+  keyApplyText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  keyCancelBtn: {
+    padding: spacing.xs,
+  },
+  // Data section
   dataSection: {
     marginTop: spacing.xxxl,
     paddingTop: spacing.xl,
     borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
   },
   dataTitle: {
     ...typography.heading,

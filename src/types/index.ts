@@ -5,7 +5,8 @@ export type FieldType =
   | 'boolean'
   | 'number'
   | 'text'
-  | 'single-line'
+  | 'label'
+  | 'single-line'  // legacy alias — treat same as label
   | 'link'
   | 'pictures'
   | 'sqft';
@@ -34,13 +35,14 @@ export interface Review {
 }
 
 export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
-  'tag': 'Tag',
+  'tag': 'Tag (multi-value)',
+  'label': 'Label (single-value)',
   'dollar': 'Dollar Amount',
   'score': 'Score',
   'boolean': 'Yes / No',
   'number': 'Number',
   'text': 'Multi-line Text',
-  'single-line': 'Single Line',
+  'single-line': 'Label (single-value)',  // legacy
   'link': 'Link',
   'pictures': 'Pictures',
   'sqft': 'Square Footage',
@@ -50,7 +52,8 @@ export function getDefaultValue(type: FieldType): unknown {
   switch (type) {
     case 'tag':
       return [];
-    case 'single-line':
+    case 'label':
+    case 'single-line':  // legacy
     case 'text':
     case 'link':
       return '';

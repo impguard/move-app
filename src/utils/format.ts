@@ -1,3 +1,15 @@
+/**
+ * Extracts a short, human-readable address from a full Nominatim display_name.
+ * e.g. "123 Main St, Los Angeles, Los Angeles County, California, 90012, US" → "123 Main St, Los Angeles"
+ */
+export function formatShortAddress(fullAddress: string): string {
+  if (!fullAddress) return fullAddress;
+  const parts = fullAddress.split(',').map((p) => p.trim()).filter(Boolean);
+  if (parts.length <= 2) return fullAddress;
+  // Keep up to first 2 parts (street + city)
+  return parts.slice(0, 2).join(', ');
+}
+
 export function formatDollar(value: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',

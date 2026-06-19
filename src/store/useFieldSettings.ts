@@ -3,30 +3,70 @@ import { v4 as uuidv4 } from 'uuid';
 import { FieldSetting, FieldType } from '@/types';
 import { getItem, setItem, FIELD_SETTINGS_KEY } from '@/store/storage';
 import { createDefaultFieldSettings } from '@/utils/defaults';
+import { pushSettings, addSettingsUpdateListener } from './firestoreSync';
 
+// ─── Module-level global state ────────────────────────────────────────────────
+let globalSettings: FieldSetting[] = [];
+let globalLoading = true;
+const globalListeners = new Set<(settings: FieldSetting[]) => void>();
+
+let firestoreListenerRegistered = false;
+
+function notifyAll(settings: FieldSetting[]) {
+  globalSettings = settings;
+  globalListeners.forEach((l) => l(settings));
+}
+
+function ensureFirestoreListener() {
+  if (firestoreListenerRegistered) return;
+  firestoreListenerRegistered = true;
+  addSettingsUpdateListener((settings) => {
+    globalLoading = false;
+    notifyAll(settings);
+  });
+}
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 export function useFieldSettings() {
-  const [fieldSettings, setFieldSettings] = useState<FieldSetting[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [fieldSettings, setFieldSettings] = useState<FieldSetting[]>(globalSettings);
+  const [loading, setLoading] = useState(globalLoading);
 
   const loadSettings = useCallback(async () => {
     const stored = await getItem<FieldSetting[]>(FIELD_SETTINGS_KEY);
     if (stored && stored.length > 0) {
-      setFieldSettings(stored);
+      globalLoading = false;
+      notifyAll(stored);
     } else {
       const defaults = createDefaultFieldSettings();
       await setItem(FIELD_SETTINGS_KEY, defaults);
-      setFieldSettings(defaults);
+      globalLoading = false;
+      notifyAll(defaults);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
-    loadSettings();
+    ensureFirestoreListener();
+
+    const listener = (s: FieldSetting[]) => {
+      setFieldSettings(s);
+      setLoading(false);
+    };
+    globalListeners.add(listener);
+
+    if (globalLoading) {
+      loadSettings();
+    } else {
+      setFieldSettings(globalSettings);
+      setLoading(false);
+    }
+
+    return () => { globalListeners.delete(listener); };
   }, [loadSettings]);
 
   const saveSettings = useCallback(async (updated: FieldSetting[]) => {
-    setFieldSettings(updated);
+    notifyAll(updated);
     await setItem(FIELD_SETTINGS_KEY, updated);
+    pushSettings(updated); // fire-and-forget sync
   }, []);
 
   const addField = useCallback(async (
@@ -40,44 +80,43 @@ export function useFieldSettings() {
       type,
       isCore: false,
       isDefault: false,
-      order: fieldSettings.length,
+      order: globalSettings.length,
       isVisible: true,
       ...(type === 'score' ? { scoreMin: config?.scoreMin ?? 1, scoreMax: config?.scoreMax ?? 5 } : {}),
     };
-    const updated = [...fieldSettings, newField];
+    const updated = [...globalSettings, newField];
     await saveSettings(updated);
     return newField;
-  }, [fieldSettings, saveSettings]);
+  }, [saveSettings]);
 
   const updateField = useCallback(async (id: string, changes: Partial<FieldSetting>) => {
-    const updated = fieldSettings.map((f) =>
+    const updated = globalSettings.map((f) =>
       f.id === id ? { ...f, ...changes } : f
     );
     await saveSettings(updated);
-  }, [fieldSettings, saveSettings]);
+  }, [saveSettings]);
 
   const deleteField = useCallback(async (id: string) => {
-    const updated = fieldSettings
+    const updated = globalSettings
       .filter((f) => f.id !== id)
       .map((f, i) => ({ ...f, order: i }));
     await saveSettings(updated);
-  }, [fieldSettings, saveSettings]);
+  }, [saveSettings]);
 
   const reorderField = useCallback(async (id: string, direction: 'up' | 'down') => {
-    const idx = fieldSettings.findIndex((f) => f.id === id);
+    const idx = globalSettings.findIndex((f) => f.id === id);
     if (idx === -1) return;
     if (direction === 'up' && idx === 0) return;
-    if (direction === 'down' && idx === fieldSettings.length - 1) return;
+    if (direction === 'down' && idx === globalSettings.length - 1) return;
 
     const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-    const updated = [...fieldSettings];
+    const updated = [...globalSettings];
     const temp = updated[idx];
     updated[idx] = updated[swapIdx];
     updated[swapIdx] = temp;
-    // Re-assign order values
     const reordered = updated.map((f, i) => ({ ...f, order: i }));
     await saveSettings(reordered);
-  }, [fieldSettings, saveSettings]);
+  }, [saveSettings]);
 
   return {
     fieldSettings,

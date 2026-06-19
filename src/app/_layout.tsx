@@ -1,15 +1,26 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors } from '@/theme';
+import { useEffect } from 'react';
+import { ThemeProvider, useTheme } from '@/theme';
+import { bootstrapSyncKey } from '@/store/useSyncKey';
 
-export default function RootLayout() {
+function SyncInitializer() {
+  useEffect(() => {
+    bootstrapSyncKey();
+  }, []);
+  return null;
+}
+
+function ThemedStack() {
+  const { colors, isDark } = useTheme();
+
   return (
     <>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerStyle: {
-            backgroundColor: colors.background,
+            backgroundColor: colors.surface,
           },
           headerTitleStyle: {
             fontWeight: '600',
@@ -25,5 +36,14 @@ export default function RootLayout() {
         }}
       />
     </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <SyncInitializer />
+      <ThemedStack />
+    </ThemeProvider>
   );
 }

@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { View, ScrollView, Text, Pressable, TextInput, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useFieldSettings } from '@/store/useFieldSettings';
 import { useFilters, ActiveFilters, FieldFilter } from '@/store/useFilters';
 import { useReviews } from '@/store/useReviews';
-import { colors, spacing, borderRadius, typography } from '@/theme';
+import { useTheme, spacing, borderRadius, typography } from '@/theme';
 
 export default function FiltersScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const { fieldSettings } = useFieldSettings();
   const { reviews } = useReviews(fieldSettings);
   const { filters, updateFilters, clearFilters } = useFilters();
@@ -28,7 +30,6 @@ export default function FiltersScreen() {
     setLocalFilters((prev) => {
       const current = prev[id] || {};
       const updated = { ...current, ...updates };
-      // Clean up empty filters
       if (
         updated.min === undefined &&
         updated.max === undefined &&
@@ -65,19 +66,18 @@ export default function FiltersScreen() {
 
     const diff = max - min;
     const step = diff / 3;
-    
-    // Nice rounding
+
     const roundTo = type === 'dollar' ? 100 : type === 'sqft' ? 50 : type === 'score' ? 0.5 : 1;
     const round = (val: number) => Math.round(val / roundTo) * roundTo;
-    
+
     const p1Max = round(min + step);
     const p2Max = round(min + step * 2);
 
-    const format = (val: number) => type === 'dollar' ? `$${val}` : String(val);
+    const format = (val: number) => type === 'dollar' ? `$${val.toLocaleString()}` : String(val);
 
     return [
       { label: `Up to ${format(p1Max)}`, min: undefined, max: p1Max },
-      { label: `${format(p1Max)} - ${format(p2Max)}`, min: p1Max, max: p2Max },
+      { label: `${format(p1Max)} – ${format(p2Max)}`, min: p1Max, max: p2Max },
       { label: `Over ${format(p2Max)}`, min: p2Max, max: undefined },
     ];
   };
@@ -92,21 +92,23 @@ export default function FiltersScreen() {
         options={{
           title: 'Filters',
           presentation: 'modal',
-          headerLeft: () => (
-            <Pressable onPress={handleClear} style={styles.headerBtn} hitSlop={8}>
-              <Text style={styles.clearBtnText}>Clear</Text>
-            </Pressable>
-          ),
-          headerRight: () => (
-            <Pressable onPress={handleApply} style={styles.headerBtn} hitSlop={8}>
-              <Text style={styles.applyBtnText}>Apply</Text>
-            </Pressable>
-          ),
+          headerStyle: { backgroundColor: colors.surface },
+          headerTitleStyle: { color: colors.text, fontWeight: '600' },
         }}
       />
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={[styles.wrapper, { backgroundColor: colors.background }]}>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.content}
+        >
         {filterableSettings.length === 0 && (
-          <Text style={styles.emptyText}>No filterable properties available.</Text>
+          <View style={[styles.emptyCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No filterable fields</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              Filters are available for numeric fields (price, sqft, score, number), boolean toggles, and tag fields.
+              Add these field types in Settings to enable filtering.
+            </Text>
+          </View>
         )}
 
         {filterableSettings.map((setting) => {
@@ -114,11 +116,11 @@ export default function FiltersScreen() {
 
           if (['score', 'dollar', 'sqft', 'number'].includes(setting.type)) {
             return (
-              <View key={setting.id} style={styles.filterSection}>
-                <Text style={styles.label}>{setting.key} Range</Text>
+              <View key={setting.id} style={[styles.filterSection, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>{setting.key} Range</Text>
                 <View style={styles.rangeRow}>
                   <TextInput
-                    style={styles.rangeInput}
+                    style={[styles.rangeInput, { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight }]}
                     placeholder="Min"
                     placeholderTextColor={colors.textTertiary}
                     keyboardType="numeric"
@@ -128,9 +130,9 @@ export default function FiltersScreen() {
                       updateLocalFilter(setting.id, { min: isNaN(num) ? undefined : num });
                     }}
                   />
-                  <Text style={styles.rangeDash}>-</Text>
+                  <Text style={[styles.rangeDash, { color: colors.textSecondary }]}>–</Text>
                   <TextInput
-                    style={styles.rangeInput}
+                    style={[styles.rangeInput, { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight }]}
                     placeholder="Max"
                     placeholderTextColor={colors.textTertiary}
                     keyboardType="numeric"
@@ -148,10 +150,16 @@ export default function FiltersScreen() {
                       return (
                         <Pressable
                           key={i}
-                          style={[styles.presetChip, isSelected && styles.presetChipSelected]}
+                          style={[
+                            styles.presetChip,
+                            { backgroundColor: colors.surfaceSecondary, borderColor: colors.borderLight },
+                            isSelected && { backgroundColor: colors.primaryLight, borderColor: colors.primary },
+                          ]}
                           onPress={() => updateLocalFilter(setting.id, { min: p.min, max: p.max })}
                         >
-                          <Text style={[styles.presetText, isSelected && styles.presetTextSelected]}>{p.label}</Text>
+                          <Text style={[styles.presetText, { color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
+                            {p.label}
+                          </Text>
                         </Pressable>
                       );
                     })}
@@ -163,10 +171,10 @@ export default function FiltersScreen() {
 
           if (setting.type === 'boolean') {
             return (
-              <View key={setting.id} style={styles.filterSection}>
-                <Text style={styles.label}>{setting.key}</Text>
+              <View key={setting.id} style={[styles.filterSection, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>{setting.key}</Text>
                 <View style={styles.boolRow}>
-                  {['Any', 'Yes', 'No'].map((opt) => {
+                  {(['Any', 'Yes', 'No'] as const).map((opt) => {
                     let isSelected = false;
                     if (opt === 'Any') isSelected = currentFilter.bool === undefined || currentFilter.bool === null;
                     if (opt === 'Yes') isSelected = currentFilter.bool === true;
@@ -175,14 +183,18 @@ export default function FiltersScreen() {
                     return (
                       <Pressable
                         key={opt}
-                        style={[styles.boolBtn, isSelected && styles.boolBtnSelected]}
+                        style={[
+                          styles.boolBtn,
+                          { backgroundColor: colors.surfaceSecondary, borderColor: colors.borderLight },
+                          isSelected && { backgroundColor: colors.primaryLight, borderColor: colors.primary },
+                        ]}
                         onPress={() => {
                           if (opt === 'Any') updateLocalFilter(setting.id, { bool: null });
                           if (opt === 'Yes') updateLocalFilter(setting.id, { bool: true });
                           if (opt === 'No') updateLocalFilter(setting.id, { bool: false });
                         }}
                       >
-                        <Text style={[styles.boolText, isSelected && styles.boolTextSelected]}>
+                        <Text style={[styles.boolText, { color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
                           {opt}
                         </Text>
                       </Pressable>
@@ -196,18 +208,27 @@ export default function FiltersScreen() {
           if (setting.type === 'tag') {
             const uniqueTags = getUniqueTags(setting.id);
             const selectedTags = currentFilter.tags || [];
-            if (uniqueTags.length === 0) return null;
+            if (uniqueTags.length === 0) return (
+              <View key={setting.id} style={[styles.filterSection, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>{setting.key}</Text>
+                <Text style={[styles.noTagsText, { color: colors.textTertiary }]}>No tags exist yet. Add tags to reviews first.</Text>
+              </View>
+            );
 
             return (
-              <View key={setting.id} style={styles.filterSection}>
-                <Text style={styles.label}>{setting.key}</Text>
+              <View key={setting.id} style={[styles.filterSection, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>{setting.key}</Text>
                 <View style={styles.tagRow}>
                   {uniqueTags.map((tag) => {
                     const isSelected = selectedTags.includes(tag);
                     return (
                       <Pressable
                         key={tag}
-                        style={[styles.tagChip, isSelected && styles.tagChipSelected]}
+                        style={[
+                          styles.tagChip,
+                          { backgroundColor: colors.surfaceSecondary, borderColor: colors.borderLight },
+                          isSelected && { backgroundColor: colors.primary, borderColor: colors.primary },
+                        ]}
                         onPress={() => {
                           let newTags = [...selectedTags];
                           if (isSelected) newTags = newTags.filter((t) => t !== tag);
@@ -215,7 +236,7 @@ export default function FiltersScreen() {
                           updateLocalFilter(setting.id, { tags: newTags.length > 0 ? newTags : undefined });
                         }}
                       >
-                        <Text style={[styles.tagText, isSelected && styles.tagTextSelected]}>
+                        <Text style={[styles.tagText, { color: colors.textSecondary }, isSelected && { color: '#fff', fontWeight: '500' }]}>
                           {tag}
                         </Text>
                       </Pressable>
@@ -228,40 +249,85 @@ export default function FiltersScreen() {
 
           return null;
         })}
+
+        {/* Clear all link at the bottom */}
+        {Object.keys(localFilters).length > 0 && (
+          <Pressable onPress={() => { setLocalFilters({}); }} style={styles.clearAllBtn}>
+            <Text style={[styles.clearAllText, { color: colors.textTertiary }]}>Clear all filters</Text>
+          </Pressable>
+        )}
+
+        {/* Bottom padding for FAB */}
+        <View style={{ height: 90 }} />
       </ScrollView>
+
+      {/* Apply FAB */}
+      <Pressable
+        onPress={handleApply}
+        style={({ pressed }) => [
+          styles.applyFab,
+          { backgroundColor: colors.success },
+          pressed && styles.applyFabPressed,
+        ]}
+      >
+        <Ionicons name="checkmark" size={28} color="#fff" />
+      </Pressable>
+    </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  headerBtn: {
-    paddingHorizontal: spacing.md,
-  },
-  clearBtnText: {
-    color: colors.textSecondary,
-    fontSize: 16,
-  },
-  applyBtnText: {
-    color: colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
+  wrapper: {
+    flex: 1,
   },
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   content: {
     padding: spacing.lg,
+    paddingBottom: 40,
+  },
+  clearAllBtn: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    marginTop: spacing.sm,
+  },
+  clearAllText: {
+    ...typography.caption,
+  },
+  applyFab: {
+    position: 'absolute',
+    right: spacing.xl,
+    bottom: spacing.xxxl,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)',
+    elevation: 8,
+  },
+  applyFabPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.95 }],
+  },
+  emptyCard: {
+    padding: spacing.xl,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.lg,
+  },
+  emptyTitle: {
+    ...typography.bodyMedium,
+    fontWeight: '600',
+    marginBottom: spacing.sm,
   },
   emptyText: {
     ...typography.body,
-    color: colors.textTertiary,
-    textAlign: 'center',
-    marginTop: spacing.xl,
+    lineHeight: 22,
   },
   filterSection: {
     marginBottom: spacing.xl,
-    backgroundColor: colors.surface,
     padding: spacing.lg,
     borderRadius: borderRadius.md,
   },
@@ -276,16 +342,13 @@ const styles = StyleSheet.create({
   },
   rangeInput: {
     flex: 1,
-    backgroundColor: colors.surfaceSecondary,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: colors.borderLight,
   },
   rangeDash: {
     fontSize: 20,
-    color: colors.textSecondary,
   },
   presetsRow: {
     flexDirection: 'row',
@@ -298,20 +361,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.surfaceSecondary,
-  },
-  presetChipSelected: {
-    backgroundColor: colors.primaryLight,
-    borderColor: colors.primary,
   },
   presetText: {
     fontSize: 13,
-    color: colors.textSecondary,
-  },
-  presetTextSelected: {
-    color: colors.primary,
-    fontWeight: '600',
   },
   boolRow: {
     flexDirection: 'row',
@@ -323,20 +375,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.surfaceSecondary,
-  },
-  boolBtnSelected: {
-    backgroundColor: colors.primaryLight,
-    borderColor: colors.primary,
   },
   boolText: {
     ...typography.bodyMedium,
-    color: colors.textSecondary,
-  },
-  boolTextSelected: {
-    color: colors.primary,
-    fontWeight: '600',
   },
   tagRow: {
     flexDirection: 'row',
@@ -348,19 +389,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
     borderWidth: 1,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.surfaceSecondary,
-  },
-  tagChipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
   },
   tagText: {
     fontSize: 14,
-    color: colors.textSecondary,
   },
-  tagTextSelected: {
-    color: colors.surface,
-    fontWeight: '500',
+  noTagsText: {
+    ...typography.caption,
+    fontStyle: 'italic',
   },
 });

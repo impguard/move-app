@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import { Review, FieldSetting } from '@/types';
-import { formatDollar, formatRelativeDate } from '@/utils/format';
-import { colors, spacing, borderRadius, shadows, typography } from '@/theme';
+import { formatDollar, formatRelativeDate, formatShortAddress } from '@/utils/format';
+import { useTheme, spacing, borderRadius, shadows, typography } from '@/theme';
 
 interface ReviewCardProps {
   review: Review;
@@ -11,9 +11,12 @@ interface ReviewCardProps {
 }
 
 export function ReviewCard({ review, fieldSettings, onPress }: ReviewCardProps) {
+  const { colors } = useTheme();
+
   const addressSetting = fieldSettings.find(f => f.key === 'Address');
-  const address = addressSetting ? (review.fields[addressSetting.id] as string | undefined) : undefined;
-  
+  const fullAddress = addressSetting ? (review.fields[addressSetting.id] as string | undefined) : undefined;
+  const address = fullAddress ? formatShortAddress(fullAddress) : undefined;
+
   const visibleSettings = fieldSettings
     .filter(f => f.isVisible && f.key !== 'Address')
     .sort((a, b) => a.order - b.order);
@@ -22,7 +25,7 @@ export function ReviewCard({ review, fieldSettings, onPress }: ReviewCardProps) 
     return (
       <View style={styles.starsRow}>
         {Array.from({ length: max }, (_, i) => (
-          <Text key={i} style={[styles.star, i < value ? styles.starFilled : styles.starEmpty]}>
+          <Text key={i} style={[styles.star, { color: i < value ? colors.star : colors.starEmpty }]}>
             ★
           </Text>
         ))}
@@ -35,14 +38,16 @@ export function ReviewCard({ review, fieldSettings, onPress }: ReviewCardProps) 
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
+        { backgroundColor: colors.surface },
+        Platform.OS === 'web' && styles.cardWeb,
         pressed && styles.cardPressed,
       ]}
     >
       <View style={styles.cardHeader}>
-        <Text style={styles.address} numberOfLines={1}>
+        <Text style={[styles.address, { color: colors.text }]} numberOfLines={1}>
           {address || 'New Property'}
         </Text>
-        <Text style={styles.time}>{formatRelativeDate(review.updatedAt)}</Text>
+        <Text style={[styles.time, { color: colors.textTertiary }]}>{formatRelativeDate(review.updatedAt)}</Text>
       </View>
 
       <View style={styles.cardBody}>
@@ -54,7 +59,7 @@ export function ReviewCard({ review, fieldSettings, onPress }: ReviewCardProps) 
             if (setting.type === 'score') {
               return (
                 <View key={setting.id} style={styles.scoreContainer}>
-                  <Text style={styles.scoreLabel}>{setting.key}</Text>
+                  <Text style={[styles.scoreLabel, { color: colors.textSecondary }]}>{setting.key}</Text>
                   {renderStars(typeof value === 'number' ? value : 0, setting.scoreMax)}
                 </View>
               );
@@ -76,9 +81,9 @@ export function ReviewCard({ review, fieldSettings, onPress }: ReviewCardProps) 
             }
 
             return (
-              <View key={setting.id} style={styles.detailChip}>
-                <Text style={styles.detailLabel}>
-                  <Text style={styles.detailKey}>{setting.key}: </Text>
+              <View key={setting.id} style={[styles.detailChip, { backgroundColor: colors.surfaceSecondary }]}>
+                <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
+                  <Text style={[styles.detailKey, { color: colors.text }]}>{setting.key}: </Text>
                   {displayValue}
                 </Text>
               </View>
@@ -92,12 +97,17 @@ export function ReviewCard({ review, fieldSettings, onPress }: ReviewCardProps) 
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
     ...shadows.md,
+  },
+  cardWeb: {
+    maxWidth: 720,
+    alignSelf: 'center' as const,
+    width: '100%' as const,
+    marginHorizontal: 0,
   },
   cardPressed: {
     opacity: 0.92,
@@ -128,12 +138,6 @@ const styles = StyleSheet.create({
   star: {
     fontSize: 16,
   },
-  starFilled: {
-    color: colors.star,
-  },
-  starEmpty: {
-    color: colors.starEmpty,
-  },
   detailsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -152,17 +156,14 @@ const styles = StyleSheet.create({
     width: 60,
   },
   detailChip: {
-    backgroundColor: colors.surfaceSecondary,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
   },
   detailLabel: {
     ...typography.caption,
-    color: colors.textSecondary,
   },
   detailKey: {
     fontWeight: '600',
-    color: colors.text,
   },
 });

@@ -146,18 +146,8 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: borderRadius.md,
     borderTopWidth: 0,
     maxHeight: 200,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
-      },
-      default: {
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      }
-    }),
+    boxShadow: '0px 2px 4px rgba(0,0,0,0.1)',
+    elevation: 4,
   },
   loadingContainer: {
     padding: spacing.md,

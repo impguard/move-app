@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, StyleSheet, Text, Pressable } from 'react-native';
-import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { Review, FieldSetting } from '@/types';
-import { colors, typography, spacing, borderRadius } from '@/theme';
+import { useTheme, spacing, borderRadius } from '@/theme';
 
 // Fix missing marker icons in leaflet web
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -27,71 +27,103 @@ function formatFieldValue(value: unknown, type: FieldSetting['type']): string {
     case 'dollar': return `$${Number(value).toLocaleString()}`;
     case 'sqft': return `${Number(value).toLocaleString()} sqft`;
     case 'score': return `⭐ ${value}`;
-    case 'boolean': return value ? '✓ Yes' : '✗ No';
+    case 'boolean': return value ? '✓' : '✗';
     case 'tag': return Array.isArray(value) ? (value as string[]).join(', ') : String(value);
     default: return String(value);
   }
 }
 
 export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings }: ReviewsMapProps) {
+  const { colors } = useTheme();
   const markers = reviews.filter((r) => r.lat !== undefined && r.lng !== undefined);
   const center = markers.length > 0 ? [markers[0].lat!, markers[0].lng!] : [39.8283, -98.5795];
 
   // Visible settings excluding the core address field
   const visibleSettings = fieldSettings.filter((s) => s.isVisible && !s.isCore);
 
+  // Build one-liner label: e.g. "⭐ 4  $2,500  3bd"
+  const buildLabel = (review: Review): string => {
+    return visibleSettings
+      .map((s) => formatFieldValue(review.fields[s.id], s.type))
+      .filter(Boolean)
+      .join('  ·  ');
+  };
+
   return (
     <View style={styles.container}>
-      <MapContainer center={center as [number, number]} zoom={markers.length > 0 ? 13 : 4} style={{ width: '100%', height: '100%' }}>
+      <MapContainer
+        center={center as [number, number]}
+        zoom={markers.length > 0 ? 13 : 4}
+        style={{ width: '100%', height: '100%' }}
+      >
         <TileLayer
           attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {markers.map((review) => (
-          <Marker key={review.id} position={[review.lat!, review.lng!]}>
-            {visibleSettings.length > 0 && (
-              <Tooltip permanent direction="bottom" offset={[0, 10]} className="custom-tooltip">
-                <View style={styles.tooltipContent}>
-                  {visibleSettings.map((s) => {
-                    const formatted = formatFieldValue(review.fields[s.id], s.type);
-                    if (!formatted) return null;
-                    return (
-                      <Text key={s.id} style={styles.tooltipText}>
-                        {formatted}
-                      </Text>
-                    );
-                  })}
-                </View>
-              </Tooltip>
-            )}
-            <Popup minWidth={180} maxWidth={260}>
-              <Pressable onPress={() => onReviewPress(review.id)} style={styles.popupPressable}>
-                <Text style={styles.calloutTitle} numberOfLines={2}>
-                  {getAddress(review)}
-                </Text>
-                {visibleSettings.length > 0 && (
-                  <View style={styles.fields}>
-                    {visibleSettings.map((s) => {
-                      const formatted = formatFieldValue(review.fields[s.id], s.type);
-                      if (!formatted) return null;
-                      return (
-                        <View key={s.id} style={styles.fieldRow}>
-                          <Text style={styles.fieldKey}>{s.key}</Text>
-                          <Text style={styles.fieldVal}>{formatted}</Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-                )}
-                <Text style={styles.calloutTap}>Tap to view →</Text>
-              </Pressable>
-            </Popup>
-          </Marker>
-        ))}
+        {markers.map((review) => {
+          const label = buildLabel(review);
+          return (
+            <Marker
+              key={review.id}
+              position={[review.lat!, review.lng!]}
+              eventHandlers={{
+                click: () => onReviewPress(review.id),
+              }}
+            >
+              {label && (
+                <Tooltip
+                  permanent
+                  direction="top"
+                  offset={[0, -28]}
+                  className="move-tooltip"
+                >
+                  <span className="move-tooltip-text">{label}</span>
+                </Tooltip>
+              )}
+            </Marker>
+          );
+        })}
       </MapContainer>
+
+      {/* Inject CSS for tooltip styling */}
+      {typeof document !== 'undefined' && (() => {
+        const id = 'move-tooltip-style';
+        if (!document.getElementById(id)) {
+          const style = document.createElement('style');
+          style.id = id;
+          style.textContent = `
+            .move-tooltip {
+              background: rgba(30, 30, 45, 0.92) !important;
+              border: none !important;
+              border-radius: 6px !important;
+              padding: 4px 8px !important;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+              white-space: nowrap !important;
+            }
+            .move-tooltip::before {
+              border-top-color: rgba(30, 30, 45, 0.92) !important;
+            }
+            .move-tooltip-text {
+              color: #fff;
+              font-size: 11px;
+              font-weight: 700;
+              font-family: system-ui, sans-serif;
+              letter-spacing: 0.1px;
+            }
+            .leaflet-tooltip-top.move-tooltip::before {
+              border-top-color: rgba(30, 30, 45, 0.92) !important;
+            }
+          `;
+          document.head.appendChild(style);
+        }
+        return null;
+      })()}
+
       {markers.length === 0 && (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No locations found. Add addresses to see them here.</Text>
+        <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            No locations found. Add addresses to see them here.
+          </Text>
         </View>
       )}
     </View>
@@ -100,52 +132,12 @@ export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings }
 
 const styles = StyleSheet.create({
   container: { flex: 1, zIndex: 0 },
-  popupPressable: { paddingVertical: 4 },
-  calloutTitle: {
-    ...typography.bodyMedium,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  fields: {
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-    paddingTop: 8,
-    marginBottom: 8,
-    gap: 4,
-  },
-  fieldRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 8,
-  },
-  fieldKey: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    flex: 1,
-  },
-  fieldVal: {
-    fontSize: 13,
-    color: colors.text,
-    fontWeight: '600',
-    textAlign: 'right',
-  },
-  calloutTap: { fontSize: 11, color: colors.primary, marginTop: 4 },
   emptyContainer: {
     position: 'absolute', top: 20, left: 20, right: 20,
-    backgroundColor: 'white', padding: 15,
-    borderRadius: 8, zIndex: 1000,
+    padding: 15,
+    borderRadius: 8,
+    zIndex: 1000,
     boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  },
-  emptyText: { textAlign: 'center', color: colors.textSecondary },
-  tooltipContent: {
-    alignItems: 'center',
-    gap: 2,
-  },
-  tooltipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#333',
-  }
+  } as any,
+  emptyText: { textAlign: 'center' },
 });

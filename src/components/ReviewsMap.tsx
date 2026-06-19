@@ -134,11 +134,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderWidth: 2,
     borderColor: 'white',
+    boxShadow: '0px 2px 2px rgba(0, 0, 0, 0.3)',
     elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
   },
   markerLabel: {
     marginTop: 2,

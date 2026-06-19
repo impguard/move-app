@@ -1,22 +1,48 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Switch, Pressable, Linking, StyleSheet } from 'react-native';
-import { FieldSetting } from '@/types';
+import { FieldSetting, Review } from '@/types';
 import { ScoreInput } from '@/components/ScoreInput';
 import { PictureField } from '@/components/PictureField';
 import { LocationAutocomplete } from '@/components/LocationAutocomplete';
-import { colors, spacing, borderRadius, typography } from '@/theme';
+import { TagSuggestionsInput } from '@/components/TagSuggestionsInput';
+import { useTheme, spacing, borderRadius, typography } from '@/theme';
 
 interface FieldRendererProps {
   setting: FieldSetting;
   value: unknown;
   onChange: (value: unknown, extra?: { lat?: number; lng?: number }) => void;
+  /** All saved reviews — used to derive autocomplete suggestions for tag/label fields */
+  allReviews?: Review[];
 }
 
-export function FieldRenderer({ setting, value, onChange }: FieldRendererProps) {
+/** Collect all unique values for a given field across all reviews */
+function collectExistingValues(setting: FieldSetting, allReviews: Review[]): string[] {
+  const seen = new Set<string>();
+  for (const review of allReviews) {
+    if (review.status === 'draft') continue;
+    const val = review.fields[setting.id];
+    if (setting.type === 'tag' || setting.type === 'label' || setting.type === 'single-line') {
+      if (Array.isArray(val)) {
+        val.forEach((t) => seen.add(String(t)));
+      } else if (typeof val === 'string' && val.trim()) {
+        seen.add(val.trim());
+      }
+    }
+  }
+  return Array.from(seen).sort();
+}
+
+export function FieldRenderer({ setting, value, onChange, allReviews = [] }: FieldRendererProps) {
+  const { colors } = useTheme();
   const [tagInputText, setTagInputText] = useState('');
+
+  const existingValues = collectExistingValues(setting, allReviews);
+
   const renderInput = () => {
     switch (setting.type) {
+      // ── Address (core single-line with geo autocomplete) ──────────────────
       case 'single-line':
+      case 'label':
         if (setting.isCore) {
           return (
             <LocationAutocomplete
@@ -26,40 +52,70 @@ export function FieldRenderer({ setting, value, onChange }: FieldRendererProps) 
             />
           );
         }
+        // ── Label: single-value with suggestions ────────────────────────────
         return (
-          <TextInput
-            style={styles.textInput}
-            value={String(value ?? '')}
-            onChangeText={(text) => onChange(text)}
-            placeholder={`Enter ${setting.key.toLowerCase()}...`}
-            placeholderTextColor={colors.textTertiary}
-          />
+          <View>
+            {/* Chips row showing the current value with a clear button */}
+            {typeof value === 'string' && value !== '' && (
+              <View style={styles.tagsContainer}>
+                <View style={[styles.tagChip, { backgroundColor: colors.primaryLight }]}>
+                  <Text style={[styles.tagText, { color: colors.primary }]}>{value as string}</Text>
+                  <Pressable onPress={() => onChange('')} hitSlop={8}>
+                    <Text style={[styles.tagRemove, { color: colors.primary }]}>✕</Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+            {/* Only show input when there's no value selected yet */}
+            {(!value || value === '') && (
+              <TagSuggestionsInput
+                existingValues={existingValues}
+                inputText={tagInputText}
+                onInputChange={setTagInputText}
+                onSubmit={(val) => {
+                  onChange(val);
+                  setTagInputText('');
+                }}
+                placeholder={`Type ${setting.key.toLowerCase()}…`}
+              />
+            )}
+          </View>
         );
 
+      // ── Tag: multi-value with suggestions ──────────────────────────────────
       case 'tag': {
-        const tags = Array.isArray(value) ? (value as string[]) : (typeof value === 'string' && value ? [value] : []);
+        const tags = Array.isArray(value)
+          ? (value as string[])
+          : typeof value === 'string' && value
+          ? [value]
+          : [];
+
+        // Filter out already-selected tags from suggestions
+        const availableSuggestions = existingValues.filter((v) => !tags.includes(v));
+
         return (
           <View>
             {tags.length > 0 && (
               <View style={styles.tagsContainer}>
                 {tags.map((t, i) => (
-                  <View key={i} style={styles.tagChip}>
-                    <Text style={styles.tagText}>{t}</Text>
+                  <View key={i} style={[styles.tagChip, { backgroundColor: colors.primaryLight }]}>
+                    <Text style={[styles.tagText, { color: colors.primary }]}>{t}</Text>
                     <Pressable
                       onPress={() => onChange(tags.filter((_, index) => index !== i))}
                       hitSlop={8}
                     >
-                      <Text style={styles.tagRemove}>✕</Text>
+                      <Text style={[styles.tagRemove, { color: colors.primary }]}>✕</Text>
                     </Pressable>
                   </View>
                 ))}
               </View>
             )}
-            <TextInput
-              style={styles.textInput}
-              value={tagInputText}
-              onChangeText={(text) => {
-                if (text.endsWith(' ') || text.endsWith(',')) {
+            <TagSuggestionsInput
+              existingValues={availableSuggestions}
+              inputText={tagInputText}
+              onInputChange={(text) => {
+                // Also handle comma/space to add tag while typing
+                if (text.endsWith(',') || text.endsWith(' ')) {
                   const newTag = text.replace(/[, ]/g, '').trim();
                   if (newTag && !tags.includes(newTag)) {
                     onChange([...tags, newTag]);
@@ -69,15 +125,13 @@ export function FieldRenderer({ setting, value, onChange }: FieldRendererProps) 
                   setTagInputText(text);
                 }
               }}
-              onSubmitEditing={() => {
-                const newTag = tagInputText.trim();
-                if (newTag && !tags.includes(newTag)) {
-                  onChange([...tags, newTag]);
+              onSubmit={(val) => {
+                if (!tags.includes(val)) {
+                  onChange([...tags, val]);
                 }
                 setTagInputText('');
               }}
-              placeholder="Type tag and press Space/Enter..."
-              placeholderTextColor={colors.textTertiary}
+              placeholder="Type tag and press Enter (or pick from list)…"
             />
           </View>
         );
@@ -86,7 +140,11 @@ export function FieldRenderer({ setting, value, onChange }: FieldRendererProps) 
       case 'text':
         return (
           <TextInput
-            style={[styles.textInput, styles.multilineInput]}
+            style={[
+              styles.textInput,
+              styles.multilineInput,
+              { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight },
+            ]}
             value={String(value ?? '')}
             onChangeText={(text) => onChange(text)}
             placeholder={`Enter ${setting.key.toLowerCase()}...`}
@@ -100,9 +158,13 @@ export function FieldRenderer({ setting, value, onChange }: FieldRendererProps) 
       case 'dollar':
         return (
           <View style={styles.prefixWrapper}>
-            <Text style={styles.prefix}>$</Text>
+            <Text style={[styles.prefix, { color: colors.textSecondary }]}>$</Text>
             <TextInput
-              style={[styles.textInput, styles.prefixInput]}
+              style={[
+                styles.textInput,
+                styles.prefixInput,
+                { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight },
+              ]}
               value={value ? String(value) : ''}
               onChangeText={(text) => {
                 const num = parseInt(text.replace(/[^0-9]/g, ''), 10);
@@ -119,7 +181,11 @@ export function FieldRenderer({ setting, value, onChange }: FieldRendererProps) 
         return (
           <View style={styles.suffixWrapper}>
             <TextInput
-              style={[styles.textInput, styles.suffixInput]}
+              style={[
+                styles.textInput,
+                styles.suffixInput,
+                { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight },
+              ]}
               value={value ? String(value) : ''}
               onChangeText={(text) => {
                 const num = parseInt(text.replace(/[^0-9]/g, ''), 10);
@@ -129,14 +195,17 @@ export function FieldRenderer({ setting, value, onChange }: FieldRendererProps) 
               placeholderTextColor={colors.textTertiary}
               keyboardType="numeric"
             />
-            <Text style={styles.suffix}>sq ft</Text>
+            <Text style={[styles.suffix, { color: colors.textSecondary }]}>sq ft</Text>
           </View>
         );
 
       case 'number':
         return (
           <TextInput
-            style={styles.textInput}
+            style={[
+              styles.textInput,
+              { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight },
+            ]}
             value={value ? String(value) : ''}
             onChangeText={(text) => {
               const num = parseFloat(text.replace(/[^0-9.]/g, ''));
@@ -167,7 +236,7 @@ export function FieldRenderer({ setting, value, onChange }: FieldRendererProps) 
               trackColor={{ false: colors.border, true: colors.primaryLight }}
               thumbColor={value ? colors.primary : colors.textTertiary}
             />
-            <Text style={styles.switchLabel}>
+            <Text style={[styles.switchLabel, { color: colors.textSecondary }]}>
               {value ? 'Yes' : 'No'}
             </Text>
           </View>
@@ -177,7 +246,11 @@ export function FieldRenderer({ setting, value, onChange }: FieldRendererProps) 
         return (
           <View style={styles.linkWrapper}>
             <TextInput
-              style={[styles.textInput, styles.linkInput]}
+              style={[
+                styles.textInput,
+                styles.linkInput,
+                { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight },
+              ]}
               value={String(value ?? '')}
               onChangeText={(text) => onChange(text)}
               placeholder="https://..."
@@ -193,9 +266,9 @@ export function FieldRenderer({ setting, value, onChange }: FieldRendererProps) 
                     Linking.openURL(url);
                   }
                 }}
-                style={styles.openButton}
+                style={[styles.openButton, { backgroundColor: colors.primaryLight }]}
               >
-                <Text style={styles.openButtonText}>Open</Text>
+                <Text style={[styles.openButtonText, { color: colors.primary }]}>Open</Text>
               </Pressable>
             ) : null}
           </View>
@@ -212,10 +285,13 @@ export function FieldRenderer({ setting, value, onChange }: FieldRendererProps) 
       default:
         return (
           <TextInput
-            style={styles.textInput}
+            style={[
+              styles.textInput,
+              { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight },
+            ]}
             value={String(value ?? '')}
             onChangeText={(text) => onChange(text)}
-            placeholder={`Enter value...`}
+            placeholder="Enter value..."
             placeholderTextColor={colors.textTertiary}
           />
         );
@@ -224,7 +300,7 @@ export function FieldRenderer({ setting, value, onChange }: FieldRendererProps) 
 
   return (
     <View style={styles.fieldContainer}>
-      <Text style={styles.fieldLabel}>{setting.key}</Text>
+      <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>{setting.key}</Text>
       {renderInput()}
     </View>
   );
@@ -239,14 +315,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   textInput: {
-    backgroundColor: colors.surfaceSecondary,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     fontSize: 15,
-    color: colors.text,
     borderWidth: 1,
-    borderColor: colors.borderLight,
   },
   tagsContainer: {
     flexDirection: 'row',
@@ -257,19 +330,16 @@ const styles = StyleSheet.create({
   tagChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primaryLight,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
     gap: spacing.xs,
   },
   tagText: {
-    color: colors.primary,
     fontWeight: '500',
     fontSize: 14,
   },
   tagRemove: {
-    color: colors.primary,
     fontWeight: 'bold',
     fontSize: 12,
   },
@@ -283,7 +353,6 @@ const styles = StyleSheet.create({
   },
   prefix: {
     fontSize: 16,
-    color: colors.textSecondary,
     fontWeight: '600',
     marginRight: spacing.sm,
     minWidth: 16,
@@ -300,7 +369,6 @@ const styles = StyleSheet.create({
   },
   suffix: {
     fontSize: 14,
-    color: colors.textSecondary,
     fontWeight: '500',
     marginLeft: spacing.sm,
   },
@@ -311,7 +379,6 @@ const styles = StyleSheet.create({
   },
   switchLabel: {
     ...typography.body,
-    color: colors.textSecondary,
   },
   linkWrapper: {
     flexDirection: 'row',
@@ -322,13 +389,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   openButton: {
-    backgroundColor: colors.primaryLight,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
   },
   openButtonText: {
-    color: colors.primary,
     fontWeight: '600',
     fontSize: 14,
   },
