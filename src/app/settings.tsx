@@ -9,6 +9,7 @@ import {
   StyleSheet,
   TextInput,
   Share,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Stack, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +18,9 @@ import { AddFieldModal } from '@/components/AddFieldModal';
 import { useFieldSettings } from '@/store/useFieldSettings';
 import { useReviews } from '@/store/useReviews';
 import { useSyncKey } from '@/store/useSyncKey';
+import { wipeSyncData } from '@/store/firestoreSync';
+import { setItem, REVIEWS_KEY, FIELD_SETTINGS_KEY } from '@/store/storage';
+import { createDefaultFieldSettings } from '@/utils/defaults';
 import { FieldType, Review, FieldSetting } from '@/types';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -34,7 +38,7 @@ export default function SettingsScreen() {
     reorderField,
     reload,
   } = useFieldSettings();
-  const { syncFieldsToReviews } = useReviews(fieldSettings);
+  const { syncFieldsToReviews, reviews, reload: reloadReviews } = useReviews(fieldSettings);
   const { syncKey, changeSyncKey } = useSyncKey();
   const [modalVisible, setModalVisible] = useState(false);
   const [showKeyInput, setShowKeyInput] = useState(false);
@@ -209,10 +213,54 @@ export default function SettingsScreen() {
     await changeSyncKey(keyInputValue.trim());
     setShowKeyInput(false);
     setKeyInputValue('');
+    
+    // Instantly wipe UI state
+    reloadReviews();
+    reload();
+
     if (Platform.OS === 'web') {
-      window.alert('Sync key updated! Your data will sync with that key.');
+      window.alert('Sync key updated! Downloading workspace data...');
     } else {
-      Alert.alert('Sync Key Updated', 'Your data will now sync with that key.');
+      Alert.alert('Sync Key Updated', 'Downloading workspace data...');
+    }
+  };
+
+  const handleWipeDatabase = () => {
+    const doWipe = async () => {
+      try {
+        await wipeSyncData(reviews, fieldSettings);
+        await setItem(REVIEWS_KEY, []);
+        const defaults = createDefaultFieldSettings();
+        await setItem(FIELD_SETTINGS_KEY, defaults);
+        reloadReviews();
+        reload();
+        if (Platform.OS === 'web') {
+          window.alert('Database wiped and factory defaults restored.');
+        } else {
+          Alert.alert('Success', 'Database wiped and factory defaults restored.');
+        }
+      } catch (e) {
+        if (Platform.OS === 'web') {
+          window.alert('Failed to wipe database.');
+        } else {
+          Alert.alert('Error', 'Failed to wipe database.');
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('WARNING: This will permanently delete ALL data for this sync key across all devices, and reset fields to factory defaults. Continue?')) {
+        doWipe();
+      }
+    } else {
+      Alert.alert(
+        'Wipe Database',
+        'WARNING: This will permanently delete ALL data for this sync key across all devices, and reset fields to factory defaults. Continue?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Wipe', style: 'destructive', onPress: doWipe },
+        ]
+      );
     }
   };
 
@@ -225,7 +273,11 @@ export default function SettingsScreen() {
           title: 'Review Fields',
         }}
       />
-      <View style={styles.container}>
+      <KeyboardAvoidingView 
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+      >
         {loading ? (
           <View style={styles.loadingContainer}>
             <Text style={styles.loadingText}>Loading...</Text>
@@ -328,13 +380,18 @@ export default function SettingsScreen() {
               
               <View style={styles.dataButtons}>
                 <Pressable style={[styles.dataBtn, { backgroundColor: colors.surfaceSecondary }]} onPress={handleExport}>
-                  <Text style={[styles.dataBtnText, { color: colors.text }]}>Export Data</Text>
+                  <Text style={[styles.dataBtnText, { color: colors.text }]}>Export</Text>
                 </Pressable>
                 <Pressable style={[styles.dataBtn, { backgroundColor: colors.surfaceSecondary }]} onPress={handleImport}>
-                  <Text style={[styles.dataBtnText, { color: colors.text }]}>Import Data</Text>
+                  <Text style={[styles.dataBtnText, { color: colors.text }]}>Import</Text>
+                </Pressable>
+                <Pressable style={[styles.dataBtn, { backgroundColor: colors.danger + '22' }]} onPress={handleWipeDatabase}>
+                  <Text style={[styles.dataBtnText, { color: colors.danger }]}>Wipe Data</Text>
                 </Pressable>
               </View>
             </View>
+
+            <View style={{ height: 250 }} />
           </ScrollView>
         )}
 
@@ -343,7 +400,7 @@ export default function SettingsScreen() {
           onClose={() => setModalVisible(false)}
           onAdd={handleAddField}
         />
-      </View>
+      </KeyboardAvoidingView>
     </>
   );
 }
@@ -351,6 +408,9 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: '100%',
+    maxWidth: 650,
+    alignSelf: 'center',
   },
   loadingContainer: {
     flex: 1,

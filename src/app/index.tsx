@@ -313,6 +313,9 @@ export default function ReviewListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: '100%',
+    maxWidth: 1000,
+    alignSelf: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -333,9 +336,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   appTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: -0.3,
+    ...typography.heading,
   },
   headerFilterChip: {
     flexDirection: 'row',
@@ -438,11 +439,12 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   listContentWeb: {
-    maxWidth: 720,
-    alignSelf: 'center' as const,
-    width: '100%',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+    gap: spacing.lg,
     paddingHorizontal: spacing.lg,
-  },
+    width: '100%',
+  } as any,
   // FAB
   fab: {
     position: 'absolute',

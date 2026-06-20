@@ -116,7 +116,13 @@ export async function initSync(syncKey: string): Promise<void> {
   unsubSettings = onSnapshot(
     settingsRef,
     async (snapshot) => {
-      if (snapshot.empty) return;
+      if (snapshot.empty) {
+        const localSettings = (await getItem<FieldSetting[]>(FIELD_SETTINGS_KEY)) || [];
+        if (localSettings.length > 0) {
+          pushSettings(localSettings);
+        }
+        return;
+      }
       try {
         const remoteSettings = snapshot.docs
           .map((d) => d.data() as FieldSetting)
@@ -168,5 +174,16 @@ export async function pushSettings(settings: FieldSetting[]): Promise<void> {
     );
   } catch (e) {
     console.warn('[Sync] Failed to push settings:', e);
+  }
+}
+
+export async function wipeSyncData(reviews: Review[], settings: FieldSetting[]): Promise<void> {
+  if (!activeSyncKey) return;
+  try {
+    const reviewPromises = reviews.map((r) => deleteDoc(doc(db, 'sync', activeSyncKey!, 'reviews', r.id)));
+    const settingsPromises = settings.map((s) => deleteDoc(doc(db, 'sync', activeSyncKey!, 'fieldSettings', s.id)));
+    await Promise.all([...reviewPromises, ...settingsPromises]);
+  } catch (e) {
+    console.warn('[Sync] Failed to wipe sync data:', e);
   }
 }

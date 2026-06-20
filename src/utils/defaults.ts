@@ -4,7 +4,7 @@ import { FieldSetting } from '@/types';
 export function createDefaultFieldSettings(): FieldSetting[] {
   return [
     {
-      id: uuidv4(),
+      id: 'default-address',
       key: 'Address',
       type: 'single-line',
       isCore: true,
@@ -13,7 +13,7 @@ export function createDefaultFieldSettings(): FieldSetting[] {
       isVisible: true,
     },
     {
-      id: uuidv4(),
+      id: 'default-rating',
       key: 'Rating',
       type: 'score',
       isCore: false,
@@ -24,7 +24,7 @@ export function createDefaultFieldSettings(): FieldSetting[] {
       isVisible: true,
     },
     {
-      id: uuidv4(),
+      id: 'default-price',
       key: 'Price',
       type: 'dollar',
       isCore: false,
@@ -33,7 +33,7 @@ export function createDefaultFieldSettings(): FieldSetting[] {
       isVisible: true,
     },
     {
-      id: uuidv4(),
+      id: 'default-sqft',
       key: 'Square Footage',
       type: 'sqft',
       isCore: false,
@@ -42,7 +42,7 @@ export function createDefaultFieldSettings(): FieldSetting[] {
       isVisible: true,
     },
     {
-      id: uuidv4(),
+      id: 'default-bedrooms',
       key: 'Bedrooms',
       type: 'number',
       isCore: false,
@@ -51,7 +51,7 @@ export function createDefaultFieldSettings(): FieldSetting[] {
       isVisible: true,
     },
     {
-      id: uuidv4(),
+      id: 'default-bathrooms',
       key: 'Bathrooms',
       type: 'number',
       isCore: false,
@@ -60,7 +60,7 @@ export function createDefaultFieldSettings(): FieldSetting[] {
       isVisible: true,
     },
     {
-      id: uuidv4(),
+      id: 'default-link',
       key: 'Link',
       type: 'link',
       isCore: false,
@@ -68,7 +68,7 @@ export function createDefaultFieldSettings(): FieldSetting[] {
       order: 6,
     },
     {
-      id: uuidv4(),
+      id: 'default-pictures',
       key: 'Pictures',
       type: 'pictures',
       isCore: false,

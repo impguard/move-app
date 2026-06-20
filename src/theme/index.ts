@@ -8,7 +8,7 @@ export type { AppColors } from './ThemeContext';
 export const spacing = {
   xs: 4,
   sm: 8,
-  md: 12,
+  md: 10,
   lg: 16,
   xl: 20,
   xxl: 24,
@@ -17,49 +17,56 @@ export const spacing = {
 
 export const borderRadius = {
   sm: 6,
-  md: 10,
-  lg: 14,
-  xl: 20,
+  md: 12,
+  lg: 24,
+  xl: 24,
   full: 999,
 };
 
 export const shadows = {
-  sm: { boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)', elevation: 2 } as any,
-  md: { boxShadow: '0px 2px 6px rgba(0, 0, 0, 0.08)', elevation: 4 } as any,
-  lg: { boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.12)', elevation: 8 } as any,
+  sm: { boxShadow: '0px 2px 4px rgba(78, 110, 88, 0.08)', elevation: 2 } as any,
+  md: { boxShadow: '0px 10px 30px -10px rgba(78, 110, 88, 0.15)', elevation: 4 } as any,
+  lg: { boxShadow: '0px 15px 40px -15px rgba(78, 110, 88, 0.2)', elevation: 8 } as any,
 };
 
 export const typography = {
   title: {
+    fontFamily: 'Outfit_700Bold',
     fontSize: 28,
     fontWeight: '700' as const,
     letterSpacing: -0.5,
   },
   heading: {
+    fontFamily: 'Outfit_600SemiBold',
     fontSize: 20,
     fontWeight: '600' as const,
     letterSpacing: -0.3,
   },
   body: {
+    fontFamily: 'Outfit_400Regular',
     fontSize: 15,
     fontWeight: '400' as const,
     lineHeight: 22,
   },
   bodyMedium: {
+    fontFamily: 'Outfit_500Medium',
     fontSize: 15,
     fontWeight: '500' as const,
   },
   caption: {
+    fontFamily: 'Outfit_400Regular',
     fontSize: 13,
     fontWeight: '400' as const,
   },
   label: {
+    fontFamily: 'Outfit_600SemiBold',
     fontSize: 13,
     fontWeight: '600' as const,
     textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
   },
   small: {
+    fontFamily: 'Outfit_400Regular',
     fontSize: 12,
     fontWeight: '400' as const,
   },

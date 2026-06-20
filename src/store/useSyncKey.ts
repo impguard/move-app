@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { v4 as uuidv4 } from 'uuid';
 import { initSync } from './firestoreSync';
+import { setItem, REVIEWS_KEY, FIELD_SETTINGS_KEY } from '@/store/storage';
+import { createDefaultFieldSettings } from '@/utils/defaults';
 
 const SYNC_KEY_STORAGE = '@move_sync_key';
 
@@ -47,6 +49,11 @@ export function useSyncKey() {
   const changeSyncKey = useCallback(async (newKey: string): Promise<void> => {
     const trimmed = newKey.trim();
     if (!trimmed) return;
+    
+    // Wipe local cache when switching keys to prevent merging old workspace data
+    await setItem(REVIEWS_KEY, []);
+    await setItem(FIELD_SETTINGS_KEY, createDefaultFieldSettings());
+    
     await AsyncStorage.setItem(SYNC_KEY_STORAGE, trimmed);
     notifySyncKeyListeners(trimmed);
     initSync(trimmed);

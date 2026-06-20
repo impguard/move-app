@@ -71,12 +71,12 @@ export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings }
               }}
             >
               {label && (
-                <Tooltip
-                  permanent
-                  direction="top"
-                  offset={[0, -28]}
-                  className="move-tooltip"
-                >
+                  <Tooltip
+                    permanent
+                    direction="top"
+                    offset={[-15, -15]}
+                    className="move-tooltip"
+                  >
                   <span className="move-tooltip-text">{label}</span>
                 </Tooltip>
               )}

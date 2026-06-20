@@ -97,17 +97,16 @@ export function ReviewCard({ review, fieldSettings, onPress }: ReviewCardProps) 
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xl,
     marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
     ...shadows.md,
   },
   cardWeb: {
-    maxWidth: 720,
-    alignSelf: 'center' as const,
     width: '100%' as const,
     marginHorizontal: 0,
+    marginBottom: 0,
   },
   cardPressed: {
     opacity: 0.92,
@@ -157,8 +156,8 @@ const styles = StyleSheet.create({
   },
   detailChip: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: borderRadius.md,
   },
   detailLabel: {
     ...typography.caption,

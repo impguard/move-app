@@ -179,7 +179,7 @@ export default function ReviewDetailScreen() {
                 />
               ))}
             </View>
-            <View style={{ height: 100 }} />
+            <View style={{ height: 250 }} />
           </ScrollView>
         )}
 
@@ -214,6 +214,9 @@ export default function ReviewDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: '100%',
+    maxWidth: 650,
+    alignSelf: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -231,7 +234,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxxl + 20,
   },
   card: {
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xl,
     padding: spacing.xl,
   },
   coordsRow: {

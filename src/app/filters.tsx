@@ -280,6 +280,9 @@ export default function FiltersScreen() {
 const styles = StyleSheet.create({
   wrapper: {
     flex: 1,
+    width: '100%',
+    maxWidth: 650,
+    alignSelf: 'center',
   },
   container: {
     flex: 1,
@@ -314,7 +317,7 @@ const styles = StyleSheet.create({
   },
   emptyCard: {
     padding: spacing.xl,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xl,
     marginBottom: spacing.lg,
   },
   emptyTitle: {
@@ -329,7 +332,7 @@ const styles = StyleSheet.create({
   filterSection: {
     marginBottom: spacing.xl,
     padding: spacing.lg,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.xl,
   },
   label: {
     ...typography.label,
