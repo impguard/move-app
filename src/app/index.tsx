@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, FlatList, Pressable, Text, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, FlatList, Pressable, Text, StyleSheet, ScrollView, Platform, Image } from 'react-native';
 import { useRouter, useFocusEffect, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ReviewCard } from '@/components/ReviewCard';
@@ -155,6 +155,7 @@ export default function ReviewListScreen() {
       contentContainerStyle={styles.headerTitleRow}
       style={styles.headerTitleScroll}
     >
+      <Image source={require('../../assets/images/icon.png')} style={{ width: 28, height: 28 }} />
       <Text style={[styles.appTitle, { color: colors.text }]}>Move</Text>
       {activeFilterChips.map((chip, i) => (
         <Pressable

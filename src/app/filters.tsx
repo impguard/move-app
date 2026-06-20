@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, Text, Pressable, TextInput, StyleSheet } from 'react-native';
+import { View, ScrollView, Text, Pressable, TextInput, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useFieldSettings } from '@/store/useFieldSettings';
@@ -96,10 +96,18 @@ export default function FiltersScreen() {
           headerTitleStyle: { color: colors.text, fontWeight: '600' },
         }}
       />
-      <View style={[styles.wrapper, { backgroundColor: colors.background }]}>
+      <KeyboardAvoidingView
+        style={[styles.wrapper, { backgroundColor: colors.background }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+      >
         <ScrollView
           style={styles.container}
           contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets={true}
+          contentInsetAdjustmentBehavior="automatic"
         >
         {filterableSettings.length === 0 && (
           <View style={[styles.emptyCard, { backgroundColor: colors.surface }]}>
@@ -272,7 +280,7 @@ export default function FiltersScreen() {
       >
         <Ionicons name="checkmark" size={28} color="#fff" />
       </Pressable>
-    </View>
+    </KeyboardAvoidingView>
     </>
   );
 }
