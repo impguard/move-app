@@ -1,21 +1,21 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import {
-  View,
-  ScrollView,
-  Text,
-  Pressable,
-  Alert,
-  Platform,
-  StyleSheet,
-  KeyboardAvoidingView,
-} from 'react-native';
-import { useLocalSearchParams, useRouter, useFocusEffect, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { FieldRenderer } from '@/components/FieldRenderer';
-import { useReviews } from '@/store/useReviews';
 import { useFieldSettings } from '@/store/useFieldSettings';
-import { useTheme, spacing, borderRadius, typography } from '@/theme';
+import { useReviews } from '@/store/useReviews';
+import { borderRadius, spacing, typography, useTheme } from '@/theme';
 import { formatShortAddress } from '@/utils/format';
+import { Ionicons } from '@expo/vector-icons';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 export default function ReviewDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -142,6 +142,8 @@ export default function ReviewDetailScreen() {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets={true}
+            contentInsetAdjustmentBehavior="automatic"
           >
             {review.hasDuplicate && (
               <View style={[styles.duplicateBanner, { backgroundColor: colors.warning + '22', borderColor: colors.warning }]}>
@@ -179,7 +181,6 @@ export default function ReviewDetailScreen() {
                 />
               ))}
             </View>
-            <View style={{ height: 250 }} />
           </ScrollView>
         )}
 
@@ -192,7 +193,7 @@ export default function ReviewDetailScreen() {
             >
               <Ionicons name="trash-outline" size={24} color={colors.danger} />
             </Pressable>
-            
+
             <Pressable
               onPress={handleSave}
               style={({ pressed }) => [

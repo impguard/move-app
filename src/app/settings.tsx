@@ -1,31 +1,31 @@
-import React, { useState, useCallback } from 'react';
-import {
-  View,
-  ScrollView,
-  Text,
-  Pressable,
-  Alert,
-  Platform,
-  StyleSheet,
-  TextInput,
-  Share,
-  KeyboardAvoidingView,
-} from 'react-native';
-import { Stack, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { FieldSettingRow } from '@/components/FieldSettingRow';
 import { AddFieldModal } from '@/components/AddFieldModal';
+import { FieldSettingRow } from '@/components/FieldSettingRow';
+import { wipeSyncData } from '@/store/firestoreSync';
+import { FIELD_SETTINGS_KEY, REVIEWS_KEY, setItem } from '@/store/storage';
 import { useFieldSettings } from '@/store/useFieldSettings';
 import { useReviews } from '@/store/useReviews';
 import { useSyncKey } from '@/store/useSyncKey';
-import { wipeSyncData } from '@/store/firestoreSync';
-import { setItem, REVIEWS_KEY, FIELD_SETTINGS_KEY } from '@/store/storage';
+import { borderRadius, colors, shadows, spacing, typography, useTheme } from '@/theme';
+import { FieldSetting, FieldType, Review } from '@/types';
 import { createDefaultFieldSettings } from '@/utils/defaults';
-import { FieldType, Review, FieldSetting } from '@/types';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
+import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import { useTheme, colors, spacing, borderRadius, shadows, typography } from '@/theme';
+import * as FileSystem from 'expo-file-system';
+import { Stack, useFocusEffect } from 'expo-router';
+import * as Sharing from 'expo-sharing';
+import { useCallback, useState } from 'react';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 export default function SettingsScreen() {
   const { colors } = useTheme();
@@ -92,7 +92,7 @@ export default function SettingsScreen() {
         settings: fieldSettings,
         reviews: [], // Fetching all reviews is already done in syncFieldsToReviews but we need them all. Let's use useReviews hook properly.
       };
-      
+
       // We need to fetch reviews
       const storedReviews = await import('@/store/storage').then(m => m.getItem<Review[]>(m.REVIEWS_KEY));
       data.reviews = storedReviews || [];
@@ -159,18 +159,18 @@ export default function SettingsScreen() {
       const newReviews = [...storedReviews];
 
       for (const importedReview of (data.reviews as Review[])) {
-        const isDuplicate = newReviews.some(r => r.id === importedReview.id || 
+        const isDuplicate = newReviews.some(r => r.id === importedReview.id ||
           (r.fields && importedReview.fields && r.fields[newSettings[0]?.id] === importedReview.fields[newSettings[0]?.id]));
-        
+
         const rToSave = { ...importedReview, hasDuplicate: isDuplicate };
         if (isDuplicate) {
-           rToSave.id = import('uuid').then(m => m.v4()) as unknown as string; // generate new id to not overwrite but flag
+          rToSave.id = import('uuid').then(m => m.v4()) as unknown as string; // generate new id to not overwrite but flag
         }
         newReviews.unshift(rToSave);
       }
 
       await import('@/store/storage').then(m => m.setItem(m.REVIEWS_KEY, newReviews));
-      
+
       if (settingsChanged) {
         // use local hook
         await syncFieldsToReviews(newSettings);
@@ -213,7 +213,7 @@ export default function SettingsScreen() {
     await changeSyncKey(keyInputValue.trim());
     setShowKeyInput(false);
     setKeyInputValue('');
-    
+
     // Instantly wipe UI state
     reloadReviews();
     reload();
@@ -273,7 +273,7 @@ export default function SettingsScreen() {
           title: 'Review Fields',
         }}
       />
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
@@ -287,6 +287,8 @@ export default function SettingsScreen() {
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
+            automaticallyAdjustKeyboardInsets={true}
+            contentInsetAdjustmentBehavior="automatic"
           >
             <Text style={styles.description}>
               Configure the fields that appear on every review. Adding or removing a field affects all reviews.
@@ -377,7 +379,7 @@ export default function SettingsScreen() {
             <View style={[styles.dataSection, { borderTopColor: colors.borderLight }]}>
               <Text style={[styles.dataTitle, { color: colors.text }]}>Data Management</Text>
               <Text style={[styles.dataDesc, { color: colors.textSecondary }]}>Note: Photos are not included in the JSON export.</Text>
-              
+
               <View style={styles.dataButtons}>
                 <Pressable style={[styles.dataBtn, { backgroundColor: colors.surfaceSecondary }]} onPress={handleExport}>
                   <Text style={[styles.dataBtnText, { color: colors.text }]}>Export</Text>
@@ -390,8 +392,6 @@ export default function SettingsScreen() {
                 </Pressable>
               </View>
             </View>
-
-            <View style={{ height: 250 }} />
           </ScrollView>
         )}
 
