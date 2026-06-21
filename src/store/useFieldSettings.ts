@@ -3,7 +3,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { FieldSetting, FieldType } from '@/types';
 import { getItem, setItem, FIELD_SETTINGS_KEY } from '@/store/storage';
 import { createDefaultFieldSettings } from '@/utils/defaults';
-import { pushSettings, addSettingsUpdateListener } from './firestoreSync';
+import { pushSettingsWithDeletions, addSettingsUpdateListener } from './firestoreSync';
+
+// ... (skipping to hook body)
+// Wait, I need to use StartLine and EndLine appropriately. Let's do a precise replace for the imports and saveSettings.
 
 // ─── Module-level global state ────────────────────────────────────────────────
 let globalSettings: FieldSetting[] = [];
@@ -75,10 +78,10 @@ export function useFieldSettings() {
     return () => { globalListeners.delete(listener); };
   }, [loadSettings]);
 
-  const saveSettings = useCallback(async (updated: FieldSetting[]) => {
-    notifyAll(updated);
+  const saveSettings = useCallback(async (updated: FieldSetting[], deletedIds: string[] = []) => {
+    // Removed notifyAll(updated) to prevent UI blinking; we rely fully on Firestore's onSnapshot which updates local cache instantly.
     await setItem(FIELD_SETTINGS_KEY, updated);
-    pushSettings(updated); // fire-and-forget sync
+    pushSettingsWithDeletions(updated, deletedIds); // fire-and-forget sync
   }, []);
 
   const addField = useCallback(async (
@@ -94,7 +97,7 @@ export function useFieldSettings() {
       isDefault: false,
       order: globalSettings.length,
       isVisibleList: true,
-      isVisibleMap: true,
+      isVisibleMap: false,
       isSortable: true,
       isFilterable: true,
       ...(type === 'score' ? { scoreMin: config?.scoreMin ?? 1, scoreMax: config?.scoreMax ?? 5 } : {}),
@@ -115,7 +118,7 @@ export function useFieldSettings() {
     const updated = globalSettings
       .filter((f) => f.id !== id)
       .map((f, i) => ({ ...f, order: i }));
-    await saveSettings(updated);
+    await saveSettings(updated, [id]);
   }, [saveSettings]);
 
   const reorderField = useCallback(async (id: string, direction: 'up' | 'down') => {

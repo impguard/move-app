@@ -45,8 +45,19 @@ export default function ReviewListScreen() {
           if (isNaN(numVal) || numVal > filter.max) return false;
         }
 
-        if (filter.bool !== undefined && filter.bool !== null) {
-          if (Boolean(val) !== filter.bool) return false;
+        if (filter.bool !== undefined) {
+          if (filter.bool === null) {
+            // "Unknown" explicitly requested -> keep only if the field is null/undefined
+            if (val !== null && val !== undefined) return false;
+          } else {
+            // "Yes" or "No" -> ensure boolean cast matches
+            // Treat null/undefined as false if strictly checking? Actually we should probably say if it's strictly Yes/No, it must match.
+            // Wait, if it's null/undefined, and they asked for "No", does it match?
+            // A boolean field that is null means "Unknown". If a user filters for "No", should Unknown be included?
+            // Usually, No means explicitly false.
+            if (val === null || val === undefined) return false;
+            if (Boolean(val) !== filter.bool) return false;
+          }
         }
 
         if (filter.tags && filter.tags.length > 0) {
@@ -86,9 +97,8 @@ export default function ReviewListScreen() {
     return filtered;
   }, [reviews, filters, sort]);
 
-  const handleCreate = async () => {
-    const id = await createReview();
-    router.push(`/review/${id}`);
+  const handleCreate = () => {
+    router.push('/review/new');
   };
 
   const handleSettings = () => {
@@ -109,8 +119,11 @@ export default function ReviewListScreen() {
         else label += `≤ ${f.max}`;
         chips.push({ fieldId, type: 'range', label });
       }
-      if (f.bool !== undefined && f.bool !== null) {
-        chips.push({ fieldId, type: 'bool', label: `${setting.key}: ${f.bool ? 'Yes' : 'No'}` });
+      if (f.bool !== undefined) {
+        let boolLabel = 'Unknown';
+        if (f.bool === true) boolLabel = 'Yes';
+        if (f.bool === false) boolLabel = 'No';
+        chips.push({ fieldId, type: 'bool', label: `${setting.key}: ${boolLabel}` });
       }
       if (f.tags && f.tags.length > 0) {
         f.tags.forEach((tag) => {
@@ -158,7 +171,7 @@ export default function ReviewListScreen() {
     if (
       f.min === undefined &&
       f.max === undefined &&
-      (f.bool === undefined || f.bool === null) &&
+      f.bool === undefined &&
       (!f.tags || f.tags.length === 0) &&
       (!f.labels || f.labels.length === 0)
     ) {

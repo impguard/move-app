@@ -228,16 +228,13 @@ export default function SettingsScreen() {
   const handleWipeDatabase = () => {
     const doWipe = async () => {
       try {
-        await wipeSyncData(reviews, fieldSettings);
-        await setItem(REVIEWS_KEY, []);
-        const defaults = createDefaultFieldSettings();
-        await setItem(FIELD_SETTINGS_KEY, defaults);
+        // We now ONLY wipe reviews, not field settings, so the user keeps their configured fields!
+        await wipeSyncData(reviews, []);
         reloadReviews();
-        reload();
         if (Platform.OS === 'web') {
-          window.alert('Database wiped and factory defaults restored.');
+          window.alert('All properties have been deleted.');
         } else {
-          Alert.alert('Success', 'Database wiped and factory defaults restored.');
+          Alert.alert('Success', 'All properties have been deleted.');
         }
       } catch (e) {
         if (Platform.OS === 'web') {
@@ -249,13 +246,13 @@ export default function SettingsScreen() {
     };
 
     if (Platform.OS === 'web') {
-      if (window.confirm('WARNING: This will permanently delete ALL data for this sync key across all devices, and reset fields to factory defaults. Continue?')) {
+      if (window.confirm('WARNING: This will permanently delete ALL properties for this sync key across all devices. Your field configurations will be kept. Continue?')) {
         doWipe();
       }
     } else {
       Alert.alert(
-        'Wipe Database',
-        'WARNING: This will permanently delete ALL data for this sync key across all devices, and reset fields to factory defaults. Continue?',
+        'Wipe Properties',
+        'WARNING: This will permanently delete ALL properties for this sync key across all devices. Your field configurations will be kept. Continue?',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Wipe', style: 'destructive', onPress: doWipe },

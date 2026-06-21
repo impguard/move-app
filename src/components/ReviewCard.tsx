@@ -89,7 +89,7 @@ export function ReviewCard({ review, fieldSettings, onPress }: ReviewCardProps) 
                 <View key={setting.id} style={styles.chipRow}>
                   <Text style={[styles.detailLabel, styles.detailKey, { color: colors.text }]}>{setting.key}:</Text>
                   <View style={[styles.coloredChip, { backgroundColor: c.bg }]}>
-                    <Text style={[styles.coloredChipText, { color: c.text }]} numberOfLines={1}>{value}</Text>
+                    <Text style={[styles.coloredChipText, { color: c.text }]}>{value}</Text>
                   </View>
                 </View>
               );

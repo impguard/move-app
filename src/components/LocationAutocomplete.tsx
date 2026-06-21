@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, TextInput, Text, FlatList, Pressable, StyleSheet, ActivityIndicator, Platform } from 'react-native';
-import { colors, spacing, borderRadius, typography } from '@/theme';
+import { borderRadius, colors, spacing, typography } from '@/theme';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 interface LocationAutocompleteProps {
   value: string;

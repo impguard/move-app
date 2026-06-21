@@ -22,12 +22,15 @@ function SyncInitializer() {
   return null;
 }
 
+import { NetworkIndicator } from '@/components/NetworkIndicator';
+
 function ThemedStack() {
   const { colors, isDark } = useTheme();
 
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} />
+      <NetworkIndicator />
       <Stack
         screenOptions={{
           headerStyle: {

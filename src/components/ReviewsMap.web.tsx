@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Text, Pressable } from 'react-native';
 import { MapContainer, TileLayer, Marker, Tooltip, Popup } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { Review, FieldSetting } from '@/types';
 import { useMap } from 'react-leaflet';
@@ -115,8 +114,17 @@ export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings }
         })}
       </MapContainer>
 
-      {/* Inject CSS for tooltip styling */}
+      {/* Inject CSS for tooltip styling and Leaflet */}
       {typeof document !== 'undefined' && (() => {
+        const cssId = 'leaflet-css';
+        if (!document.getElementById(cssId)) {
+          const link = document.createElement('link');
+          link.id = cssId;
+          link.rel = 'stylesheet';
+          link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+          document.head.appendChild(link);
+        }
+
         const id = 'move-tooltip-style';
         if (!document.getElementById(id)) {
           const style = document.createElement('style');

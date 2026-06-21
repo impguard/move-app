@@ -2,6 +2,7 @@ import { FieldRenderer } from '@/components/FieldRenderer';
 import { useFieldSettings } from '@/store/useFieldSettings';
 import { useReviews } from '@/store/useReviews';
 import { borderRadius, spacing, typography, useTheme } from '@/theme';
+import { getDefaultValue } from '@/types';
 import { formatShortAddress } from '@/utils/format';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -19,23 +20,35 @@ import {
 
 export default function ReviewDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const isNew = id === 'new';
   const router = useRouter();
   const { colors } = useTheme();
   const { fieldSettings, loading: settingsLoading } = useFieldSettings();
   const {
     reviews,
     loading: reviewsLoading,
+    createReview,
     updateReview,
     deleteReview,
     getReview,
     reload,
   } = useReviews(fieldSettings);
 
+  const review = isNew ? undefined : getReview(id!);
+
+  // ─── Local State for Create Mode ─────────────────────────────────────────────
   const [localFields, setLocalFields] = useState<Record<string, unknown>>({});
   const [localExtra, setLocalExtra] = useState<{ lat?: number; lng?: number }>({});
-  const [initialized, setInitialized] = useState(false);
-
-  const review = getReview(id!);
+  
+  useEffect(() => {
+    if (isNew && fieldSettings.length > 0 && Object.keys(localFields).length === 0) {
+      const initial: Record<string, unknown> = {};
+      fieldSettings.forEach(fs => {
+        initial[fs.id] = getDefaultValue(fs.type);
+      });
+      setLocalFields(initial);
+    }
+  }, [isNew, fieldSettings, localFields]);
 
   useFocusEffect(
     useCallback(() => {
@@ -43,24 +56,16 @@ export default function ReviewDetailScreen() {
     }, [reload])
   );
 
-  useEffect(() => {
-    if (review && !initialized) {
-      setLocalFields(review.fields);
-      setLocalExtra({ lat: review.lat, lng: review.lng });
-      setInitialized(true);
-    }
-  }, [review, initialized]);
-
   const handleFieldChange = useCallback((fieldId: string, value: unknown, extra?: { lat?: number; lng?: number }) => {
-    setLocalFields((prev) => ({ ...prev, [fieldId]: value }));
-    if (extra) {
-      setLocalExtra((prev) => ({ ...prev, ...extra }));
+    if (isNew) {
+      setLocalFields((prev) => ({ ...prev, [fieldId]: value }));
+      if (extra) setLocalExtra((prev) => ({ ...prev, ...extra }));
+    } else {
+      updateReview(id!, { [fieldId]: value }, { ...extra, status: 'saved' });
     }
-  }, []);
+  }, [isNew, id, updateReview]);
 
-  const handleSave = useCallback(() => {
-    if (!review) return;
-
+  const handleSaveCreate = async () => {
     const addressSetting = fieldSettings.find((f) => f.isCore);
     if (addressSetting) {
       const addrValue = localFields[addressSetting.id];
@@ -79,14 +84,19 @@ export default function ReviewDetailScreen() {
       }
     }
 
-    updateReview(id!, localFields, { ...localExtra, status: 'saved' });
-    router.back();
-  }, [id, review, fieldSettings, localFields, localExtra, updateReview, router]);
+    const newId = await createReview(localFields, localExtra);
+    router.replace(`/review/${newId}`);
+  };
 
   const handleDelete = () => {
+    if (isNew) return;
     const doDelete = async () => {
       await deleteReview(id!);
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/');
+      }
     };
 
     if (Platform.OS === 'web') {
@@ -109,10 +119,16 @@ export default function ReviewDetailScreen() {
 
   // Get address for header title — use short format
   const addressField = fieldSettings.find((f) => f.key === 'Address');
-  const addressValue = addressField ? (localFields[addressField.id] as string) : '';
+  const addressValue = addressField 
+    ? (isNew ? localFields[addressField.id] : review?.fields[addressField.id]) as string
+    : '';
   const shortTitle = addressValue ? formatShortAddress(addressValue) : 'New Property';
 
   const sortedSettings = [...fieldSettings].sort((a, b) => a.order - b.order);
+
+  // Derived active values
+  const activeLat = isNew ? localExtra.lat : review?.lat;
+  const activeLng = isNew ? localExtra.lng : review?.lng;
 
   return (
     <>
@@ -128,11 +144,11 @@ export default function ReviewDetailScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={100}
       >
-        {loading || !initialized ? (
+        {loading ? (
           <View style={styles.loadingContainer}>
             <Text style={[styles.loadingText, { color: colors.textTertiary }]}>Loading...</Text>
           </View>
-        ) : !review ? (
+        ) : !isNew && !review ? (
           <View style={styles.loadingContainer}>
             <Text style={[styles.loadingText, { color: colors.textTertiary }]}>Review not found</Text>
           </View>
@@ -145,7 +161,7 @@ export default function ReviewDetailScreen() {
             automaticallyAdjustKeyboardInsets={true}
             contentInsetAdjustmentBehavior="automatic"
           >
-            {review.hasDuplicate && (
+            {!isNew && review?.hasDuplicate && (
               <View style={[styles.duplicateBanner, { backgroundColor: colors.warning + '22', borderColor: colors.warning }]}>
                 <Text style={[styles.duplicateText, { color: colors.warning }]}>
                   ⚠️ This review may be a duplicate of an existing review.
@@ -154,15 +170,15 @@ export default function ReviewDetailScreen() {
             )}
 
             <View style={[styles.card, { backgroundColor: colors.surface }]}>
-              {localExtra.lat !== undefined && localExtra.lng !== undefined && (
+              {activeLat !== undefined && activeLng !== undefined && (
                 <View style={[styles.coordsRow, { backgroundColor: colors.surfaceSecondary, borderColor: colors.borderLight }]}>
                   <Text style={[styles.coordsText, { color: colors.textSecondary }]}>
-                    📍 {localExtra.lat.toFixed(5)}, {localExtra.lng.toFixed(5)}
+                    📍 {activeLat.toFixed(5)}, {activeLng.toFixed(5)}
                   </Text>
                   <Pressable
                     style={[styles.mapJumpBtn, { backgroundColor: colors.primaryLight }]}
                     onPress={() => {
-                      const url = `https://maps.google.com/?q=${localExtra.lat},${localExtra.lng}`;
+                      const url = `https://maps.google.com/?q=${activeLat},${activeLng}`;
                       import('react-native').then(({ Linking }) => Linking.openURL(url));
                     }}
                   >
@@ -175,7 +191,7 @@ export default function ReviewDetailScreen() {
                 <View key={setting.id} style={{ zIndex: 1000 - index }}>
                   <FieldRenderer
                     setting={setting}
-                    value={localFields[setting.id]}
+                    value={isNew ? localFields[setting.id] : review?.fields[setting.id]}
                     onChange={(value, extra) => handleFieldChange(setting.id, value, extra)}
                     allReviews={reviews}
                   />
@@ -185,27 +201,34 @@ export default function ReviewDetailScreen() {
           </ScrollView>
         )}
 
-        {initialized && review && (
+        {/* Action Bar */}
+        {(!loading && (isNew || review)) && (
           <View style={[styles.actionBar, { backgroundColor: colors.surface }]}>
-            <Pressable
-              onPress={handleDelete}
-              style={({ pressed }) => [styles.trashBtn, pressed && { backgroundColor: colors.danger + '22' }]}
-              hitSlop={8}
-            >
-              <Ionicons name="trash-outline" size={24} color={colors.danger} />
-            </Pressable>
+            {!isNew ? (
+              <Pressable
+                onPress={handleDelete}
+                style={({ pressed }) => [styles.trashBtn, pressed && { backgroundColor: colors.danger + '22' }]}
+                hitSlop={8}
+              >
+                <Ionicons name="trash-outline" size={24} color={colors.danger} />
+              </Pressable>
+            ) : (
+              <View /> // Spacer
+            )}
 
-            <Pressable
-              onPress={handleSave}
-              style={({ pressed }) => [
-                styles.saveFab,
-                { backgroundColor: colors.success },
-                pressed && styles.saveFabPressed,
-              ]}
-            >
-              <Ionicons name="checkmark" size={24} color="#fff" style={{ marginRight: 4 }} />
-              <Text style={styles.saveFabText}>Save</Text>
-            </Pressable>
+            {isNew && (
+              <Pressable
+                onPress={handleSaveCreate}
+                style={({ pressed }) => [
+                  styles.saveFab,
+                  { backgroundColor: colors.success },
+                  pressed && styles.saveFabPressed,
+                ]}
+              >
+                <Ionicons name="checkmark" size={24} color="#fff" style={{ marginRight: 4 }} />
+                <Text style={styles.saveFabText}>Save Property</Text>
+              </Pressable>
+            )}
           </View>
         )}
       </KeyboardAvoidingView>

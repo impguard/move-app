@@ -16,12 +16,13 @@ import {
   collection,
   doc,
   setDoc,
+  updateDoc,
   deleteDoc,
   onSnapshot,
+  writeBatch,
   Unsubscribe,
 } from 'firebase/firestore';
 import { Review, FieldSetting } from '@/types';
-import { getItem, setItem, REVIEWS_KEY, FIELD_SETTINGS_KEY } from './storage';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ReviewListener = (reviews: Review[]) => void;
@@ -35,29 +36,20 @@ let unsubSettings: Unsubscribe | null = null;
 const reviewListeners = new Set<ReviewListener>();
 const settingsListeners = new Set<SettingsListener>();
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+let isFirestoreConnected = true;
+const connectionListeners = new Set<(connected: boolean) => void>();
 
-/** Merge local + remote reviews, keeping whichever has the newer updatedAt */
-function mergeReviews(local: Review[], remote: Review[]): { merged: Review[]; changed: boolean } {
-  const map = new Map<string, Review>();
-  local.forEach((r) => map.set(r.id, r));
+export function addConnectionListener(fn: (connected: boolean) => void): () => void {
+  connectionListeners.add(fn);
+  fn(isFirestoreConnected);
+  return () => connectionListeners.delete(fn);
+}
 
-  let changed = false;
-  remote.forEach((r) => {
-    const existing = map.get(r.id);
-    if (!existing) {
-      map.set(r.id, r);
-      changed = true;
-    } else if (new Date(r.updatedAt) > new Date(existing.updatedAt)) {
-      map.set(r.id, r);
-      changed = true;
-    }
-  });
-
-  const merged = Array.from(map.values()).sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  );
-  return { merged, changed };
+export function setFirestoreConnected(connected: boolean) {
+  if (isFirestoreConnected !== connected) {
+    isFirestoreConnected = connected;
+    connectionListeners.forEach((l) => l(connected));
+  }
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -66,92 +58,77 @@ export function getActiveSyncKey(): string | null {
   return activeSyncKey;
 }
 
-/** Register a callback that fires when Firestore pushes new reviews */
 export function addReviewUpdateListener(fn: ReviewListener): () => void {
   reviewListeners.add(fn);
   return () => reviewListeners.delete(fn);
 }
 
-/** Register a callback that fires when Firestore pushes new field settings */
 export function addSettingsUpdateListener(fn: SettingsListener): () => void {
   settingsListeners.add(fn);
   return () => settingsListeners.delete(fn);
 }
 
-/**
- * Initialize (or re-initialize) Firestore subscriptions for a given sync key.
- * Safe to call multiple times — tears down old subscriptions first.
- */
 export async function initSync(syncKey: string): Promise<void> {
   if (syncKey === activeSyncKey) return;
   activeSyncKey = syncKey;
 
-  // Tear down existing subscriptions
   if (unsubReviews) { unsubReviews(); unsubReviews = null; }
   if (unsubSettings) { unsubSettings(); unsubSettings = null; }
 
-  // ── Reviews subscription ──────────────────────────────────────────────────
   const reviewsRef = collection(db, 'sync', syncKey, 'reviews');
   unsubReviews = onSnapshot(
     reviewsRef,
-    async (snapshot) => {
-      if (snapshot.empty) return;
-      try {
-        const remoteReviews = snapshot.docs.map((d) => d.data() as Review);
-        const localReviews = (await getItem<Review[]>(REVIEWS_KEY)) || [];
-        const { merged, changed } = mergeReviews(localReviews, remoteReviews);
-        if (changed) {
-          await setItem(REVIEWS_KEY, merged);
-          reviewListeners.forEach((l) => l(merged));
-        }
-      } catch (e) {
-        console.warn('[Sync] Reviews merge error:', e);
-      }
+    { includeMetadataChanges: true },
+    (snapshot) => {
+      setFirestoreConnected(!snapshot.metadata.fromCache);
+      const remoteReviews = snapshot.docs.map((d) => d.data() as Review);
+      // Sort by updatedAt descending
+      const sorted = remoteReviews.sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      );
+      reviewListeners.forEach((l) => l(sorted));
     },
-    (err) => console.warn('[Sync] Reviews snapshot error:', err)
+    (err) => {
+      console.warn('[Sync] Reviews snapshot error:', err);
+      setFirestoreConnected(false);
+    }
   );
 
-  // ── Field settings subscription ───────────────────────────────────────────
   const settingsRef = collection(db, 'sync', syncKey, 'fieldSettings');
   unsubSettings = onSnapshot(
     settingsRef,
-    async (snapshot) => {
-      if (snapshot.empty) {
-        const localSettings = (await getItem<FieldSetting[]>(FIELD_SETTINGS_KEY)) || [];
-        if (localSettings.length > 0) {
-          pushSettings(localSettings);
-        }
-        return;
-      }
-      try {
-        const remoteSettings = snapshot.docs
-          .map((d) => d.data() as FieldSetting)
-          .sort((a, b) => a.order - b.order);
-        const localSettings = (await getItem<FieldSetting[]>(FIELD_SETTINGS_KEY)) || [];
-
-        // Simple last-write-wins for settings: use remote if it has more or different entries
-        const localJson = JSON.stringify(localSettings.map((s) => s.id).sort());
-        const remoteJson = JSON.stringify(remoteSettings.map((s) => s.id).sort());
-        if (localJson !== remoteJson || JSON.stringify(localSettings) !== JSON.stringify(remoteSettings)) {
-          await setItem(FIELD_SETTINGS_KEY, remoteSettings);
-          settingsListeners.forEach((l) => l(remoteSettings));
-        }
-      } catch (e) {
-        console.warn('[Sync] Settings merge error:', e);
-      }
+    { includeMetadataChanges: true },
+    (snapshot) => {
+      setFirestoreConnected(!snapshot.metadata.fromCache);
+      const remoteSettings = snapshot.docs
+        .map((d) => d.data() as FieldSetting)
+        .sort((a, b) => a.order - b.order);
+      settingsListeners.forEach((l) => l(remoteSettings));
     },
-    (err) => console.warn('[Sync] Settings snapshot error:', err)
+    (err) => {
+      console.warn('[Sync] Settings snapshot error:', err);
+      setFirestoreConnected(false);
+    }
   );
 }
 
-// ─── Push operations (fire-and-forget) ────────────────────────────────────────
+// ─── Push operations ────────────────────────────────────────────────────────
 
-export async function pushReview(review: Review): Promise<void> {
+export async function createReviewRemote(review: Review): Promise<void> {
   if (!activeSyncKey) return;
   try {
     await setDoc(doc(db, 'sync', activeSyncKey, 'reviews', review.id), review);
   } catch (e) {
     console.warn('[Sync] Failed to push review:', e);
+  }
+}
+
+export async function updateReviewFields(id: string, updates: Record<string, any>): Promise<void> {
+  if (!activeSyncKey) return;
+  try {
+    await updateDoc(doc(db, 'sync', activeSyncKey, 'reviews', id), updates);
+  } catch (e) {
+    console.warn('[Sync] Failed to update review:', e);
   }
 }
 
@@ -164,16 +141,19 @@ export async function removeReview(reviewId: string): Promise<void> {
   }
 }
 
-export async function pushSettings(settings: FieldSetting[]): Promise<void> {
+export async function pushSettingsWithDeletions(settings: FieldSetting[], deletedIds: string[] = []): Promise<void> {
   if (!activeSyncKey) return;
   try {
-    await Promise.all(
-      settings.map((s) =>
-        setDoc(doc(db, 'sync', activeSyncKey!, 'fieldSettings', s.id), s)
-      )
-    );
+    const batch = writeBatch(db);
+    for (const s of settings) {
+      batch.set(doc(db, 'sync', activeSyncKey, 'fieldSettings', s.id), s);
+    }
+    for (const id of deletedIds) {
+      batch.delete(doc(db, 'sync', activeSyncKey, 'fieldSettings', id));
+    }
+    await batch.commit();
   } catch (e) {
-    console.warn('[Sync] Failed to push settings:', e);
+    console.warn('[Sync] pushSettingsWithDeletions failed:', e);
   }
 }
 

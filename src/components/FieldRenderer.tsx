@@ -40,19 +40,18 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [] }: Fie
   const existingValues = collectExistingValues(setting, allReviews);
 
   const renderInput = () => {
+    if (setting.isCore) {
+      return (
+        <LocationAutocomplete
+          value={String(value ?? '')}
+          onChange={(text, lat, lng) => onChange(text, { lat, lng })}
+          placeholder="Search address..."
+        />
+      );
+    }
+
     switch (setting.type) {
-      // ── Address (core single-line with geo autocomplete) ──────────────────
-      case 'address':
       case 'label':
-        if (setting.isCore) {
-          return (
-            <LocationAutocomplete
-              value={String(value ?? '')}
-              onChange={(text, lat, lng) => onChange(text, { lat, lng })}
-              placeholder="Search address..."
-            />
-          );
-        }
         // ── Label: single-value with suggestions ────────────────────────────
         return (
           <View>
@@ -123,9 +122,9 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [] }: Fie
               existingValues={availableSuggestions}
               inputText={tagInputText}
               onInputChange={(text) => {
-                // Also handle comma/space to add tag while typing
-                if (text.endsWith(',') || text.endsWith(' ')) {
-                  const newTag = text.replace(/[, ]/g, '').trim();
+                // Handle comma to add tag while typing
+                if (text.endsWith(',')) {
+                  const newTag = text.replace(/,/g, '').trim();
                   if (newTag && !tags.includes(newTag)) {
                     onChange([...tags, newTag]);
                   }
@@ -238,16 +237,39 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [] }: Fie
 
       case 'boolean':
         return (
-          <View style={styles.switchRow}>
-            <Switch
-              value={Boolean(value)}
-              onValueChange={(val) => onChange(val)}
-              trackColor={{ false: colors.border, true: colors.primaryLight }}
-              thumbColor={value ? colors.primary : colors.textTertiary}
-            />
-            <Text style={[styles.switchLabel, { color: colors.textSecondary }]}>
-              {value ? 'Yes' : 'No'}
-            </Text>
+          <View style={styles.triStateRow}>
+            {(['yes', 'no', 'unknown'] as const).map((opt) => {
+              const isSelected = 
+                (opt === 'yes' && value === true) || 
+                (opt === 'no' && value === false) || 
+                (opt === 'unknown' && (value === null || value === undefined));
+              
+              const activeBg = opt === 'yes' ? colors.success : opt === 'no' ? colors.danger : colors.border;
+              
+              return (
+                <Pressable
+                  key={opt}
+                  onPress={() => {
+                    if (opt === 'yes') onChange(true);
+                    else if (opt === 'no') onChange(false);
+                    else onChange(null);
+                  }}
+                  style={[
+                    styles.triStateBtn,
+                    { borderColor: colors.borderLight },
+                    isSelected && { backgroundColor: activeBg, borderColor: activeBg }
+                  ]}
+                >
+                  <Text style={[
+                    styles.triStateText,
+                    { color: colors.textSecondary },
+                    isSelected && { color: '#fff', fontWeight: '600' }
+                  ]}>
+                    {opt === 'yes' ? 'Yes' : opt === 'no' ? 'No' : 'Unknown'}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         );
 
@@ -388,6 +410,20 @@ const styles = StyleSheet.create({
   },
   switchLabel: {
     ...typography.body,
+  },
+  triStateRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  triStateBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+  },
+  triStateText: {
+    ...typography.bodyMedium,
   },
   linkWrapper: {
     flexDirection: 'row',

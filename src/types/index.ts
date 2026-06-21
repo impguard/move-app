@@ -31,6 +31,7 @@ export interface Review {
   id: string;
   createdAt: string;
   updatedAt: string;
+  version?: number;
   fields: Record<string, unknown>;
   hasDuplicate?: boolean;
   lat?: number;
@@ -46,7 +47,7 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   'dollar': 'Dollar Amount',
   'sqft': 'Square Footage',
   'score': 'Score',
-  'boolean': 'Yes / No',
+  'boolean': 'Yes / No / Unknown',
   'text': 'Multi-line Text',
   'link': 'Link',
   'pictures': 'Pictures',
@@ -68,7 +69,7 @@ export function getDefaultValue(type: FieldType): unknown {
     case 'score':
       return 1;
     case 'boolean':
-      return false;
+      return null;
     case 'pictures':
       return [];
     default:

@@ -34,7 +34,7 @@ export default function FiltersScreen() {
       if (
         updated.min === undefined &&
         updated.max === undefined &&
-        (updated.bool === undefined || updated.bool === null) &&
+        updated.bool === undefined &&
         (!updated.tags || updated.tags.length === 0) &&
         (!updated.labels || updated.labels.length === 0)
       ) {
@@ -210,11 +210,12 @@ export default function FiltersScreen() {
               <View key={setting.id} style={[styles.filterSection, { backgroundColor: colors.surface }]}>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>{setting.key}</Text>
                 <View style={styles.boolRow}>
-                  {(['Any', 'Yes', 'No'] as const).map((opt) => {
+                  {(['Any', 'Yes', 'No', 'Unknown'] as const).map((opt) => {
                     let isSelected = false;
-                    if (opt === 'Any') isSelected = currentFilter.bool === undefined || currentFilter.bool === null;
+                    if (opt === 'Any') isSelected = currentFilter.bool === undefined;
                     if (opt === 'Yes') isSelected = currentFilter.bool === true;
                     if (opt === 'No') isSelected = currentFilter.bool === false;
+                    if (opt === 'Unknown') isSelected = currentFilter.bool === null;
 
                     return (
                       <Pressable
@@ -225,9 +226,10 @@ export default function FiltersScreen() {
                           isSelected && { backgroundColor: colors.primaryLight, borderColor: colors.primary },
                         ]}
                         onPress={() => {
-                          if (opt === 'Any') updateLocalFilter(setting.id, { bool: null });
+                          if (opt === 'Any') updateLocalFilter(setting.id, { bool: undefined });
                           if (opt === 'Yes') updateLocalFilter(setting.id, { bool: true });
                           if (opt === 'No') updateLocalFilter(setting.id, { bool: false });
+                          if (opt === 'Unknown') updateLocalFilter(setting.id, { bool: null });
                         }}
                       >
                         <View style={{ alignItems: 'center', justifyContent: 'center' }}>
