@@ -70,7 +70,7 @@ export function useReviews(fieldSettings: FieldSetting[]) {
     // Optimistic UI update
     notifyAll([newReview, ...globalReviews]);
     
-    await createReviewRemote(newReview);
+    createReviewRemote(newReview); // fire-and-forget
     return newReview.id;
   }, []);
 

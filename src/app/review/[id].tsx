@@ -85,7 +85,7 @@ export default function ReviewDetailScreen() {
     }
 
     const newId = await createReview(localFields, localExtra);
-    router.replace(`/review/${newId}`);
+    router.setParams({ id: newId });
   };
 
   const handleDelete = () => {

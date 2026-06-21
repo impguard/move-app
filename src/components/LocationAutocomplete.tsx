@@ -1,6 +1,8 @@
 import { borderRadius, colors, spacing, typography } from '@/theme';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View, Platform } from 'react-native';
+
+const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 interface LocationAutocompleteProps {
   value: string;
@@ -10,9 +12,7 @@ interface LocationAutocompleteProps {
 
 interface Suggestion {
   place_id: string;
-  display_name: string;
-  lat: string;
-  lon: string;
+  description: string;
 }
 
 export function LocationAutocomplete({ value, onChange, placeholder }: LocationAutocompleteProps) {
@@ -37,21 +37,33 @@ export function LocationAutocomplete({ value, onChange, placeholder }: LocationA
       return;
     }
 
+    if (!GOOGLE_API_KEY) {
+      console.warn('EXPO_PUBLIC_GOOGLE_MAPS_API_KEY is missing! Google Maps autocomplete will not work.');
+      return;
+    }
+
     const delayDebounceFn = setTimeout(async () => {
       setLoading(true);
       try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-            query
-          )}&format=json&addressdetails=1&limit=5`,
-          {
-            headers: {
-              'User-Agent': 'MoveApp/1.0',
-            },
-          }
-        );
+        let url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
+          query
+        )}&key=${GOOGLE_API_KEY}&components=country:us`;
+        
+        if (Platform.OS === 'web') {
+          url = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+        }
+
+        const response = await fetch(url);
         const data = await response.json();
-        setSuggestions(data);
+        
+        if (data.status === 'OK' && data.predictions) {
+          setSuggestions(data.predictions.map((p: any) => ({
+            place_id: p.place_id,
+            description: p.description,
+          })));
+        } else {
+          setSuggestions([]);
+        }
       } catch (error) {
         console.error('Error fetching location suggestions:', error);
       } finally {
@@ -62,19 +74,40 @@ export function LocationAutocomplete({ value, onChange, placeholder }: LocationA
     return () => clearTimeout(delayDebounceFn);
   }, [query, showSuggestions]);
 
-  const handleSelect = useCallback((suggestion: Suggestion) => {
-    const lat = parseFloat(suggestion.lat);
-    const lng = parseFloat(suggestion.lon);
-    const name = suggestion.display_name;
+  const handleSelect = useCallback(async (suggestion: Suggestion) => {
+    const name = suggestion.description;
 
-    // Update internal display
+    // Update internal display instantly
     setQuery(name);
     prevValueRef.current = name;
     setShowSuggestions(false);
     setSuggestions([]);
 
-    // Notify parent ONCE with confirmed name + coords
-    onChange(name, lat, lng);
+    if (!GOOGLE_API_KEY) {
+      onChange(name);
+      return;
+    }
+
+    // Fetch lat/lng using Place Details API
+    try {
+      let detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${suggestion.place_id}&fields=geometry&key=${GOOGLE_API_KEY}`;
+      if (Platform.OS === 'web') {
+        detailsUrl = `https://corsproxy.io/?${encodeURIComponent(detailsUrl)}`;
+      }
+      const response = await fetch(detailsUrl);
+      const data = await response.json();
+      
+      if (data.status === 'OK' && data.result?.geometry?.location) {
+        const lat = data.result.geometry.location.lat;
+        const lng = data.result.geometry.location.lng;
+        onChange(name, lat, lng);
+      } else {
+        onChange(name);
+      }
+    } catch (e) {
+      console.error('Failed to fetch place details', e);
+      onChange(name);
+    }
   }, [onChange]);
 
   return (
@@ -95,9 +128,14 @@ export function LocationAutocomplete({ value, onChange, placeholder }: LocationA
         autoCorrect={false}
         spellCheck={false}
       />
-      {showSuggestions && (loading || suggestions.length > 0) && (
+      {showSuggestions && (loading || suggestions.length > 0 || !GOOGLE_API_KEY) && (
         <View style={styles.suggestionsContainer}>
-          {loading && (
+          {!GOOGLE_API_KEY && (
+            <View style={{ padding: 10 }}>
+              <Text style={{ color: colors.danger, fontSize: 12 }}>Missing API Key in .env</Text>
+            </View>
+          )}
+          {loading && GOOGLE_API_KEY && (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="small" color={colors.primary} />
             </View>
@@ -112,7 +150,7 @@ export function LocationAutocomplete({ value, onChange, placeholder }: LocationA
                 onPress={() => handleSelect(item)}
               >
                 <Text style={styles.suggestionText} numberOfLines={2}>
-                  {item.display_name}
+                  {item.description}
                 </Text>
               </Pressable>
             )}

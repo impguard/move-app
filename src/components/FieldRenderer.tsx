@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Switch, Pressable, Linking, StyleSheet } from 'react-native';
 import { FieldSetting, Review } from '@/types';
 import { ScoreInput } from '@/components/ScoreInput';
@@ -7,6 +7,46 @@ import { LocationAutocomplete } from '@/components/LocationAutocomplete';
 import { TagSuggestionsInput } from '@/components/TagSuggestionsInput';
 import { getHashColor } from '@/utils/colors';
 import { useTheme, spacing, borderRadius, typography } from '@/theme';
+
+function DecimalInput({ value, onChange, placeholder, style, colors }: any) {
+  const [text, setText] = useState(value != null && value !== 0 ? String(value) : '');
+
+  useEffect(() => {
+    if (value != null) {
+      const valStr = String(value);
+      // Only update local text if it's materially different, to preserve trailing dots while typing
+      if (valStr !== text && parseFloat(valStr) !== parseFloat(text || '0')) {
+        setText(value === 0 ? '' : valStr);
+      }
+    }
+  }, [value, text]);
+
+  return (
+    <TextInput
+      style={style}
+      value={text}
+      onChangeText={(val) => {
+        let cleaned = val.replace(/[^0-9.]/g, '');
+        const parts = cleaned.split('.');
+        if (parts.length > 2) cleaned = parts[0] + '.' + parts.slice(1).join('');
+        setText(cleaned);
+
+        if (cleaned === '') onChange(0);
+        else if (!cleaned.endsWith('.')) onChange(parseFloat(cleaned));
+      }}
+      onBlur={() => {
+        if (text.endsWith('.')) {
+          const num = parseFloat(text);
+          setText(isNaN(num) || num === 0 ? '' : String(num));
+          onChange(isNaN(num) ? 0 : num);
+        }
+      }}
+      placeholder={placeholder}
+      placeholderTextColor={colors.textTertiary}
+      keyboardType="decimal-pad"
+    />
+  );
+}
 
 interface FieldRendererProps {
   setting: FieldSetting;
@@ -167,20 +207,16 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [] }: Fie
         return (
           <View style={styles.prefixWrapper}>
             <Text style={[styles.prefix, { color: colors.textSecondary }]}>$</Text>
-            <TextInput
+            <DecimalInput
               style={[
                 styles.textInput,
                 styles.prefixInput,
                 { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight },
               ]}
-              value={value ? String(value) : ''}
-              onChangeText={(text) => {
-                const num = parseInt(text.replace(/[^0-9]/g, ''), 10);
-                onChange(isNaN(num) ? 0 : num);
-              }}
+              value={value}
+              onChange={onChange}
               placeholder="0"
-              placeholderTextColor={colors.textTertiary}
-              keyboardType="numeric"
+              colors={colors}
             />
           </View>
         );
@@ -188,20 +224,16 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [] }: Fie
       case 'sqft':
         return (
           <View style={styles.suffixWrapper}>
-            <TextInput
+            <DecimalInput
               style={[
                 styles.textInput,
                 styles.suffixInput,
                 { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight },
               ]}
-              value={value ? String(value) : ''}
-              onChangeText={(text) => {
-                const num = parseInt(text.replace(/[^0-9]/g, ''), 10);
-                onChange(isNaN(num) ? 0 : num);
-              }}
+              value={value}
+              onChange={onChange}
               placeholder="0"
-              placeholderTextColor={colors.textTertiary}
-              keyboardType="numeric"
+              colors={colors}
             />
             <Text style={[styles.suffix, { color: colors.textSecondary }]}>sq ft</Text>
           </View>
@@ -209,19 +241,15 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [] }: Fie
 
       case 'number':
         return (
-          <TextInput
+          <DecimalInput
             style={[
               styles.textInput,
               { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight },
             ]}
-            value={value ? String(value) : ''}
-            onChangeText={(text) => {
-              const num = parseFloat(text.replace(/[^0-9.]/g, ''));
-              onChange(isNaN(num) ? 0 : num);
-            }}
+            value={value}
+            onChange={onChange}
             placeholder="0"
-            placeholderTextColor={colors.textTertiary}
-            keyboardType="numeric"
+            colors={colors}
           />
         );
 

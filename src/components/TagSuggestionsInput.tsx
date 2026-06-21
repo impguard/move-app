@@ -77,10 +77,20 @@ export function TagSuggestionsInput({
           onInputChange(t);
           setShowSuggestions(true);
         }}
+        onKeyPress={(e: any) => {
+          if (e.nativeEvent.key === 'Tab') {
+            const trimmed = inputText.trim();
+            if (trimmed) {
+              onSubmit(trimmed);
+              onInputChange('');
+              setShowSuggestions(false);
+            }
+          }
+        }}
         onFocus={() => setShowSuggestions(true)}
         onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
         onSubmitEditing={handleSubmitEditing}
-        placeholder={placeholder ?? 'Type and press Enter…'}
+        placeholder={placeholder ?? 'Type and press Enter (or Tab)…'}
         placeholderTextColor={colors.textTertiary}
         autoCorrect={false}
         autoCapitalize="none"
