@@ -17,7 +17,7 @@ function formatFieldValue(value: unknown, type: FieldSetting['type']): string {
     case 'dollar': return `$${Number(value).toLocaleString()}`;
     case 'sqft': return `${Number(value).toLocaleString()} sqft`;
     case 'score': return `⭐ ${value}`;
-    case 'boolean': return value ? '✓ Yes' : '✗ No';
+    case 'boolean': return value ? '✓' : '✗';
     case 'tag': return Array.isArray(value) ? (value as string[]).join(', ') : String(value);
     default: return String(value);
   }
@@ -27,23 +27,29 @@ export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings }
   const mapRef = useRef<MapView>(null);
 
   const markers = reviews.filter((r) => r.lat !== undefined && r.lng !== undefined);
-  const visibleSettings = fieldSettings.filter((s) => s.isVisible && !s.isCore);
+  const mapVisibleSettings = fieldSettings.filter((s) => (s.isVisibleMap ?? s.isVisible ?? true) && !s.isCore);
+  const listVisibleSettings = fieldSettings.filter((s) => (s.isVisibleList ?? s.isVisible ?? true) && !s.isCore).sort((a, b) => a.order - b.order);
+
+  const [mapReady, setMapReady] = React.useState(false);
 
   useEffect(() => {
-    if (markers.length > 0 && mapRef.current) {
+    if (markers.length > 0 && mapRef.current && mapReady) {
       const coordinates = markers.map((r) => ({ latitude: r.lat!, longitude: r.lng! }));
-      mapRef.current.fitToCoordinates(coordinates, {
-        edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
-        animated: true,
-      });
+      setTimeout(() => {
+        mapRef.current?.fitToCoordinates(coordinates, {
+          edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+          animated: true,
+        });
+      }, 100);
     }
-  }, [markers]);
+  }, [markers, mapReady]);
 
   return (
     <View style={styles.container}>
       <MapView
         ref={mapRef}
         style={styles.map}
+        onMapReady={() => setMapReady(true)}
         initialRegion={
           markers.length > 0
             ? {
@@ -64,13 +70,14 @@ export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings }
           >
             <View style={styles.customMarkerContainer}>
               <View style={styles.markerDot} />
-              {visibleSettings.length > 0 && (
+              {mapVisibleSettings.length > 0 && (
                 <View style={styles.markerLabel}>
-                  {visibleSettings.map((s) => {
+                  {mapVisibleSettings.map((s) => {
                     const formatted = formatFieldValue(review.fields[s.id], s.type);
                     if (!formatted) return null;
                     return (
-                      <Text key={s.id} style={styles.markerLabelText} numberOfLines={1}>
+                      <Text key={s.id} style={styles.markerLabelText}>
+                        <Text style={{ fontWeight: '400', color: '#666' }}>{s.key}: </Text>
                         {formatted}
                       </Text>
                     );
@@ -83,7 +90,7 @@ export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings }
                 <Text style={styles.calloutTitle} numberOfLines={2}>
                   {getAddress(review)}
                 </Text>
-                {visibleSettings.map((s) => {
+                {listVisibleSettings.map((s) => {
                   const formatted = formatFieldValue(review.fields[s.id], s.type);
                   if (!formatted) return null;
                   return (
@@ -146,10 +153,12 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#ccc',
     alignItems: 'center',
+    maxWidth: 120,
   },
   markerLabelText: {
     fontSize: 10,
     fontWeight: '700',
     color: '#333',
+    textAlign: 'center',
   }
 });

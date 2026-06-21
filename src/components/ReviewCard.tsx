@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform, Linking } from 'react-native';
 import { Review, FieldSetting } from '@/types';
 import { formatDollar, formatRelativeDate, formatShortAddress } from '@/utils/format';
+import { getHashColor } from '@/utils/colors';
 import { useTheme, spacing, borderRadius, shadows, typography } from '@/theme';
 
 interface ReviewCardProps {
@@ -18,7 +19,7 @@ export function ReviewCard({ review, fieldSettings, onPress }: ReviewCardProps) 
   const address = fullAddress ? formatShortAddress(fullAddress) : undefined;
 
   const visibleSettings = fieldSettings
-    .filter(f => f.isVisible && f.key !== 'Address')
+    .filter(f => (f.isVisibleList ?? f.isVisible ?? true) && f.key !== 'Address')
     .sort((a, b) => a.order - b.order);
 
   const renderStars = (value: number, max: number = 5) => {
@@ -65,28 +66,69 @@ export function ReviewCard({ review, fieldSettings, onPress }: ReviewCardProps) 
               );
             }
 
+            if (setting.type === 'tag' && Array.isArray(value)) {
+              if (value.length === 0) return null;
+              return (
+                <View key={setting.id} style={styles.chipRow}>
+                  <Text style={[styles.detailLabel, styles.detailKey, { color: colors.text }]}>{setting.key}:</Text>
+                  {value.map((tag: string, i: number) => {
+                    const c = getHashColor(tag);
+                    return (
+                      <View key={i} style={[styles.coloredChip, { backgroundColor: c.bg }]}>
+                        <Text style={[styles.coloredChipText, { color: c.text }]}>{tag}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              );
+            }
+
+            if ((setting.type === 'label' || setting.type === 'address') && typeof value === 'string' && value.trim() !== '') {
+              const c = getHashColor(value);
+              return (
+                <View key={setting.id} style={styles.chipRow}>
+                  <Text style={[styles.detailLabel, styles.detailKey, { color: colors.text }]}>{setting.key}:</Text>
+                  <View style={[styles.coloredChip, { backgroundColor: c.bg }]}>
+                    <Text style={[styles.coloredChipText, { color: c.text }]} numberOfLines={1}>{value}</Text>
+                  </View>
+                </View>
+              );
+            }
+
+            if (setting.type === 'link' && typeof value === 'string' && value.trim() !== '') {
+              return (
+                <Text key={setting.id} style={[styles.detailLabel, { color: colors.textSecondary }]} numberOfLines={1}>
+                  <Text style={[styles.detailKey, { color: colors.text }]}>{setting.key}: </Text>
+                  <Text 
+                    style={{ color: colors.primary, textDecorationLine: 'underline' }}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      Linking.openURL(value).catch(() => {});
+                    }}
+                  >
+                    {value}
+                  </Text>
+                </Text>
+              );
+            }
+
             let displayValue = String(value);
             if (setting.type === 'dollar' && typeof value === 'number') {
               displayValue = formatDollar(value);
             } else if (setting.type === 'sqft' && typeof value === 'number') {
               displayValue = `${value} sq ft`;
             } else if (setting.type === 'boolean') {
-              displayValue = value ? 'Yes' : 'No';
-            } else if (setting.type === 'tag' && Array.isArray(value)) {
-              if (value.length === 0) return null;
-              displayValue = value.join(', ');
+              displayValue = value ? '✓' : '✗';
             } else if (setting.type === 'pictures' && Array.isArray(value)) {
               if (value.length === 0) return null;
               displayValue = `${value.length} photos`;
             }
 
             return (
-              <View key={setting.id} style={[styles.detailChip, { backgroundColor: colors.surfaceSecondary }]}>
-                <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                  <Text style={[styles.detailKey, { color: colors.text }]}>{setting.key}: </Text>
-                  {displayValue}
-                </Text>
-              </View>
+              <Text key={setting.id} style={[styles.detailLabel, { color: colors.textSecondary }]} numberOfLines={1}>
+                <Text style={[styles.detailKey, { color: colors.text }]}>{setting.key}: </Text>
+                {displayValue}
+              </Text>
             );
           })}
         </View>
@@ -163,6 +205,23 @@ const styles = StyleSheet.create({
     ...typography.caption,
   },
   detailKey: {
+    fontWeight: '600',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    width: '100%',
+    marginBottom: spacing.xs,
+  },
+  coloredChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  coloredChipText: {
+    fontSize: 12,
     fontWeight: '600',
   },
 });

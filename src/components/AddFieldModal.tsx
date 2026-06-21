@@ -21,13 +21,13 @@ interface AddFieldModalProps {
 
 const FIELD_TYPES: FieldType[] = [
   'label',
-  'text',
   'tag',
   'number',
   'dollar',
   'sqft',
   'score',
   'boolean',
+  'text',
   'link',
   'pictures',
 ];

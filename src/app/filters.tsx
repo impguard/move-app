@@ -6,6 +6,7 @@ import { useFieldSettings } from '@/store/useFieldSettings';
 import { useFilters, ActiveFilters, FieldFilter } from '@/store/useFilters';
 import { useReviews } from '@/store/useReviews';
 import { useTheme, spacing, borderRadius, typography } from '@/theme';
+import { getHashColor } from '@/utils/colors';
 
 export default function FiltersScreen() {
   const router = useRouter();
@@ -34,7 +35,8 @@ export default function FiltersScreen() {
         updated.min === undefined &&
         updated.max === undefined &&
         (updated.bool === undefined || updated.bool === null) &&
-        (!updated.tags || updated.tags.length === 0)
+        (!updated.tags || updated.tags.length === 0) &&
+        (!updated.labels || updated.labels.length === 0)
       ) {
         const next = { ...prev };
         delete next[id];
@@ -44,25 +46,42 @@ export default function FiltersScreen() {
     });
   };
 
-  const getUniqueTags = (settingId: string) => {
-    const allTags = new Set<string>();
+  const getUniqueValues = (settingId: string) => {
+    const allValues = new Set<string>();
     reviews.forEach((r) => {
       const val = r.fields[settingId];
       if (Array.isArray(val)) {
-        val.forEach((t) => allTags.add(String(t)));
+        val.forEach((t) => allValues.add(String(t)));
+      } else if (typeof val === 'string' && val.trim()) {
+        allValues.add(val.trim());
       }
     });
-    return Array.from(allTags);
+    return Array.from(allValues).sort();
   };
 
   const getPresets = (settingId: string, type: string) => {
     const values = reviews
       .map((r) => Number(r.fields[settingId]))
       .filter((v) => !isNaN(v) && v !== 0);
-    if (values.length < 2) return null;
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    if (min === max) return null;
+    
+    if (values.length === 0) return null;
+
+    const uniqueValues = Array.from(new Set(values)).sort((a, b) => a - b);
+    const format = (val: number) => type === 'dollar' ? `$${val.toLocaleString()}` : String(val);
+
+    if (uniqueValues.length === 1) {
+      return [{ label: format(uniqueValues[0]), min: uniqueValues[0], max: uniqueValues[0] }];
+    }
+    
+    if (uniqueValues.length === 2) {
+      return [
+        { label: format(uniqueValues[0]), min: uniqueValues[0], max: uniqueValues[0] },
+        { label: format(uniqueValues[1]), min: uniqueValues[1], max: uniqueValues[1] },
+      ];
+    }
+
+    const min = Math.min(...uniqueValues);
+    const max = Math.max(...uniqueValues);
 
     const diff = max - min;
     const step = diff / 3;
@@ -73,8 +92,6 @@ export default function FiltersScreen() {
     const p1Max = round(min + step);
     const p2Max = round(min + step * 2);
 
-    const format = (val: number) => type === 'dollar' ? `$${val.toLocaleString()}` : String(val);
-
     return [
       { label: `Up to ${format(p1Max)}`, min: undefined, max: p1Max },
       { label: `${format(p1Max)} – ${format(p2Max)}`, min: p1Max, max: p2Max },
@@ -83,32 +100,40 @@ export default function FiltersScreen() {
   };
 
   const filterableSettings = fieldSettings.filter((s) =>
-    ['score', 'dollar', 'sqft', 'number', 'boolean', 'tag'].includes(s.type)
+    s.isFilterable !== false && ['score', 'dollar', 'sqft', 'number', 'boolean', 'tag', 'label', 'address'].includes(s.type)
   );
 
   return (
     <>
       <Stack.Screen
         options={{
-          title: 'Filters',
-          presentation: 'modal',
-          headerStyle: { backgroundColor: colors.surface },
-          headerTitleStyle: { color: colors.text, fontWeight: '600' },
+          presentation: 'transparentModal',
+          headerShown: false,
+          animation: 'fade',
         }}
       />
-      <KeyboardAvoidingView
-        style={[styles.wrapper, { backgroundColor: colors.background }]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
-      >
-        <ScrollView
-          style={styles.container}
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          automaticallyAdjustKeyboardInsets={true}
-          contentInsetAdjustmentBehavior="automatic"
+      <View style={styles.backdropContainer}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => router.back()} />
+        <KeyboardAvoidingView
+          style={[styles.sheetContent, { backgroundColor: colors.background }]}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
+          <View style={[styles.dragHandle, { backgroundColor: colors.borderLight }]} />
+          <View style={styles.headerRow}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Filters</Text>
+            <Pressable onPress={() => router.back()} hitSlop={10}>
+              <Ionicons name="close" size={24} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+          <ScrollView
+            style={styles.container}
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets={true}
+            contentInsetAdjustmentBehavior="automatic"
+          >
         {filterableSettings.length === 0 && (
           <View style={[styles.emptyCard, { backgroundColor: colors.surface }]}>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>No filterable fields</Text>
@@ -165,9 +190,12 @@ export default function FiltersScreen() {
                           ]}
                           onPress={() => updateLocalFilter(setting.id, { min: p.min, max: p.max })}
                         >
-                          <Text style={[styles.presetText, { color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
-                            {p.label}
-                          </Text>
+                          <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={[styles.presetText, { fontWeight: '600', opacity: 0 }]}>{p.label}</Text>
+                            <Text style={[styles.presetText, { position: 'absolute', color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
+                              {p.label}
+                            </Text>
+                          </View>
                         </Pressable>
                       );
                     })}
@@ -202,9 +230,12 @@ export default function FiltersScreen() {
                           if (opt === 'No') updateLocalFilter(setting.id, { bool: false });
                         }}
                       >
-                        <Text style={[styles.boolText, { color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
-                          {opt}
-                        </Text>
+                        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={[styles.boolText, { fontWeight: '600', opacity: 0 }]}>{opt}</Text>
+                          <Text style={[styles.boolText, { position: 'absolute', color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
+                            {opt}
+                          </Text>
+                        </View>
                       </Pressable>
                     );
                   })}
@@ -213,40 +244,50 @@ export default function FiltersScreen() {
             );
           }
 
-          if (setting.type === 'tag') {
-            const uniqueTags = getUniqueTags(setting.id);
-            const selectedTags = currentFilter.tags || [];
+          if (setting.type === 'tag' || setting.type === 'label' || setting.type === 'address') {
+            const isLabel = setting.type !== 'tag';
+            const uniqueTags = getUniqueValues(setting.id);
+            const selectedTags = (isLabel ? currentFilter.labels : currentFilter.tags) || [];
             if (uniqueTags.length === 0) return (
               <View key={setting.id} style={[styles.filterSection, { backgroundColor: colors.surface }]}>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>{setting.key}</Text>
-                <Text style={[styles.noTagsText, { color: colors.textTertiary }]}>No tags exist yet. Add tags to reviews first.</Text>
+                <Text style={[styles.noTagsText, { color: colors.textTertiary }]}>No values exist yet. Add data to reviews first.</Text>
               </View>
             );
 
             return (
               <View key={setting.id} style={[styles.filterSection, { backgroundColor: colors.surface }]}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>{setting.key}</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>{setting.key} {isLabel ? '(Any of)' : '(All of)'}</Text>
                 <View style={styles.tagRow}>
                   {uniqueTags.map((tag) => {
                     const isSelected = selectedTags.includes(tag);
+                    const hc = getHashColor(tag);
                     return (
                       <Pressable
                         key={tag}
                         style={[
                           styles.tagChip,
-                          { backgroundColor: colors.surfaceSecondary, borderColor: colors.borderLight },
-                          isSelected && { backgroundColor: colors.primary, borderColor: colors.primary },
+                          { backgroundColor: hc.bg, borderColor: hc.text + '44' },
+                          isSelected && { backgroundColor: hc.text, borderColor: hc.text },
                         ]}
                         onPress={() => {
                           let newTags = [...selectedTags];
                           if (isSelected) newTags = newTags.filter((t) => t !== tag);
                           else newTags.push(tag);
-                          updateLocalFilter(setting.id, { tags: newTags.length > 0 ? newTags : undefined });
+                          
+                          if (isLabel) {
+                            updateLocalFilter(setting.id, { labels: newTags.length > 0 ? newTags : undefined });
+                          } else {
+                            updateLocalFilter(setting.id, { tags: newTags.length > 0 ? newTags : undefined });
+                          }
                         }}
                       >
-                        <Text style={[styles.tagText, { color: colors.textSecondary }, isSelected && { color: '#fff', fontWeight: '500' }]}>
-                          {tag}
-                        </Text>
+                        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={[styles.tagText, { fontWeight: '500', opacity: 0 }]}>{tag}</Text>
+                          <Text style={[styles.tagText, { position: 'absolute', color: hc.text }, isSelected && { color: '#fff', fontWeight: '500' }]}>
+                            {tag}
+                          </Text>
+                        </View>
                       </Pressable>
                     );
                   })}
@@ -280,17 +321,47 @@ export default function FiltersScreen() {
       >
         <Ionicons name="checkmark" size={28} color="#fff" />
       </Pressable>
-    </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
+  backdropContainer: {
     flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  sheetContent: {
     width: '100%',
     maxWidth: 650,
     alignSelf: 'center',
+    maxHeight: '85%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+    boxShadow: '0 -4px 16px rgba(0,0,0,0.2)',
+    elevation: 24,
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.md,
+  },
+  headerTitle: {
+    ...typography.heading,
+    fontSize: 20,
   },
   container: {
     flex: 1,

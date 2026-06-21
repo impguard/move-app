@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { FieldSetting, FIELD_TYPE_LABELS } from '@/types';
 import { useTheme, spacing, borderRadius, typography } from '@/theme';
 
@@ -10,7 +11,10 @@ interface FieldSettingRowProps {
   onMoveUp: () => void;
   onMoveDown: () => void;
   onDelete: () => void;
-  onToggleVisibility: () => void;
+  onToggleListVisibility: () => void;
+  onToggleMapVisibility: () => void;
+  onToggleSortable: () => void;
+  onToggleFilterable: () => void;
 }
 
 export function FieldSettingRow({
@@ -20,9 +24,19 @@ export function FieldSettingRow({
   onMoveUp,
   onMoveDown,
   onDelete,
-  onToggleVisibility,
+  onToggleListVisibility,
+  onToggleMapVisibility,
+  onToggleSortable,
+  onToggleFilterable,
 }: FieldSettingRowProps) {
   const { colors } = useTheme();
+
+  const isSortableType = ['score', 'dollar', 'sqft', 'number', 'boolean', 'label', 'address'].includes(setting.type);
+  const isFilterableType = ['score', 'dollar', 'sqft', 'number', 'boolean', 'tag', 'label', 'address'].includes(setting.type);
+
+  // For backward compatibility, if undefined, we assume default true if the type supports it
+  const isSortable = setting.isSortable !== false;
+  const isFilterable = setting.isFilterable !== false;
 
   return (
     <View style={[styles.row, { backgroundColor: colors.surface, borderBottomColor: colors.borderLight }]}>
@@ -60,14 +74,32 @@ export function FieldSettingRow({
         </View>
       )}
 
-      <Pressable onPress={onToggleVisibility} style={styles.visibilityBtn} hitSlop={8}>
-        <Text style={[styles.visibilityIcon, { color: colors.primary }, !setting.isVisible && { color: colors.textTertiary, opacity: 0.5 }]}>
-          {setting.isVisible ? '👁' : '👁‍🗨'}
-        </Text>
-        <Text style={[styles.visibilityText, { color: colors.textSecondary }]}>
-          {setting.isVisible ? 'Visible' : 'Hidden'}
-        </Text>
-      </Pressable>
+      <View style={styles.toggles}>
+        {isFilterableType && (
+          <Pressable onPress={onToggleFilterable} style={styles.iconBtn} hitSlop={8}>
+            <Ionicons name="filter" size={16} color={isFilterable ? colors.primary : colors.textTertiary} style={{ opacity: isFilterable ? 1 : 0.5 }} />
+            <Text style={[styles.iconText, { color: isFilterable ? colors.primary : colors.textTertiary }]}>Filter</Text>
+          </Pressable>
+        )}
+        {isSortableType && (
+          <Pressable onPress={onToggleSortable} style={styles.iconBtn} hitSlop={8}>
+            <Ionicons name="swap-vertical" size={16} color={isSortable ? colors.primary : colors.textTertiary} style={{ opacity: isSortable ? 1 : 0.5 }} />
+            <Text style={[styles.iconText, { color: isSortable ? colors.primary : colors.textTertiary }]}>Sort</Text>
+          </Pressable>
+        )}
+        <Pressable onPress={onToggleListVisibility} style={styles.iconBtn} hitSlop={8}>
+          <Ionicons name="card-outline" size={16} color={setting.isVisibleList ? colors.primary : colors.textTertiary} style={{ opacity: setting.isVisibleList ? 1 : 0.5 }} />
+          <Text style={[styles.iconText, { color: setting.isVisibleList ? colors.textSecondary : colors.textTertiary }]}>
+            {setting.isVisibleList ? 'Card' : 'Hidden'}
+          </Text>
+        </Pressable>
+        <Pressable onPress={onToggleMapVisibility} style={styles.iconBtn} hitSlop={8}>
+          <Ionicons name="location-outline" size={16} color={setting.isVisibleMap ? colors.primary : colors.textTertiary} style={{ opacity: setting.isVisibleMap ? 1 : 0.5 }} />
+          <Text style={[styles.iconText, { color: setting.isVisibleMap ? colors.textSecondary : colors.textTertiary }]}>
+            {setting.isVisibleMap ? 'Pin' : 'Hidden'}
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -112,6 +144,7 @@ const styles = StyleSheet.create({
   },
   deleteBtn: {
     padding: spacing.sm,
+    marginRight: spacing.sm,
   },
   deleteText: {
     fontSize: 16,
@@ -121,21 +154,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: borderRadius.sm,
+    marginRight: spacing.sm,
   },
   coreText: {
     fontSize: 11,
     fontWeight: '500',
   },
-  visibilityBtn: {
+  toggles: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: spacing.md,
-    padding: spacing.xs,
+    gap: spacing.md,
+  },
+  iconBtn: {
+    alignItems: 'center',
+    width: 32,
   },
   visibilityIcon: {
     fontSize: 16,
   },
-  visibilityText: {
-    fontSize: 9,
+  iconText: {
+    fontSize: 8,
     marginTop: 2,
+    fontWeight: '500',
   },
 });

@@ -13,8 +13,20 @@ const globalListeners = new Set<(settings: FieldSetting[]) => void>();
 let firestoreListenerRegistered = false;
 
 function notifyAll(settings: FieldSetting[]) {
-  globalSettings = settings;
-  globalListeners.forEach((l) => l(settings));
+  const migrated = settings.map((s) => {
+    let isVisibleList = s.isVisibleList;
+    let isVisibleMap = s.isVisibleMap;
+    if (isVisibleList === undefined) {
+      isVisibleList = s.isVisible ?? true;
+    }
+    if (isVisibleMap === undefined) {
+      isVisibleMap = s.isVisible ?? true;
+    }
+    return { ...s, isVisibleList, isVisibleMap };
+  });
+
+  globalSettings = migrated;
+  globalListeners.forEach((l) => l(migrated));
 }
 
 function ensureFirestoreListener() {
@@ -81,7 +93,10 @@ export function useFieldSettings() {
       isCore: false,
       isDefault: false,
       order: globalSettings.length,
-      isVisible: true,
+      isVisibleList: true,
+      isVisibleMap: true,
+      isSortable: true,
+      isFilterable: true,
       ...(type === 'score' ? { scoreMin: config?.scoreMin ?? 1, scoreMax: config?.scoreMax ?? 5 } : {}),
     };
     const updated = [...globalSettings, newField];

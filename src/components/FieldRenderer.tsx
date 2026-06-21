@@ -5,6 +5,7 @@ import { ScoreInput } from '@/components/ScoreInput';
 import { PictureField } from '@/components/PictureField';
 import { LocationAutocomplete } from '@/components/LocationAutocomplete';
 import { TagSuggestionsInput } from '@/components/TagSuggestionsInput';
+import { getHashColor } from '@/utils/colors';
 import { useTheme, spacing, borderRadius, typography } from '@/theme';
 
 interface FieldRendererProps {
@@ -21,7 +22,7 @@ function collectExistingValues(setting: FieldSetting, allReviews: Review[]): str
   for (const review of allReviews) {
     if (review.status === 'draft') continue;
     const val = review.fields[setting.id];
-    if (setting.type === 'tag' || setting.type === 'label' || setting.type === 'single-line') {
+    if (setting.type === 'tag' || setting.type === 'label' || setting.type === 'address') {
       if (Array.isArray(val)) {
         val.forEach((t) => seen.add(String(t)));
       } else if (typeof val === 'string' && val.trim()) {
@@ -41,7 +42,7 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [] }: Fie
   const renderInput = () => {
     switch (setting.type) {
       // ── Address (core single-line with geo autocomplete) ──────────────────
-      case 'single-line':
+      case 'address':
       case 'label':
         if (setting.isCore) {
           return (
@@ -58,12 +59,17 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [] }: Fie
             {/* Chips row showing the current value with a clear button */}
             {typeof value === 'string' && value !== '' && (
               <View style={styles.tagsContainer}>
-                <View style={[styles.tagChip, { backgroundColor: colors.primaryLight }]}>
-                  <Text style={[styles.tagText, { color: colors.primary }]}>{value as string}</Text>
-                  <Pressable onPress={() => onChange('')} hitSlop={8}>
-                    <Text style={[styles.tagRemove, { color: colors.primary }]}>✕</Text>
-                  </Pressable>
-                </View>
+                {(() => {
+                  const c = getHashColor(value as string);
+                  return (
+                    <View style={[styles.tagChip, { backgroundColor: c.bg }]}>
+                      <Text style={[styles.tagText, { color: c.text }]}>{value as string}</Text>
+                      <Pressable onPress={() => onChange('')} hitSlop={8}>
+                        <Text style={[styles.tagRemove, { color: c.text, marginLeft: 4 }]}>✕</Text>
+                      </Pressable>
+                    </View>
+                  );
+                })()}
               </View>
             )}
             {/* Only show input when there's no value selected yet */}
@@ -97,17 +103,20 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [] }: Fie
           <View>
             {tags.length > 0 && (
               <View style={styles.tagsContainer}>
-                {tags.map((t, i) => (
-                  <View key={i} style={[styles.tagChip, { backgroundColor: colors.primaryLight }]}>
-                    <Text style={[styles.tagText, { color: colors.primary }]}>{t}</Text>
-                    <Pressable
-                      onPress={() => onChange(tags.filter((_, index) => index !== i))}
-                      hitSlop={8}
-                    >
-                      <Text style={[styles.tagRemove, { color: colors.primary }]}>✕</Text>
-                    </Pressable>
-                  </View>
-                ))}
+                {tags.map((t, i) => {
+                  const c = getHashColor(t);
+                  return (
+                    <View key={i} style={[styles.tagChip, { backgroundColor: c.bg }]}>
+                      <Text style={[styles.tagText, { color: c.text }]}>{t}</Text>
+                      <Pressable
+                        onPress={() => onChange(tags.filter((_, index) => index !== i))}
+                        hitSlop={8}
+                      >
+                        <Text style={[styles.tagRemove, { color: c.text, marginLeft: 4 }]}>✕</Text>
+                      </Pressable>
+                    </View>
+                  );
+                })}
               </View>
             )}
             <TagSuggestionsInput

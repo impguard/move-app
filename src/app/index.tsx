@@ -8,14 +8,17 @@ import { EmptyState } from '@/components/EmptyState';
 import { useReviews } from '@/store/useReviews';
 import { useFieldSettings } from '@/store/useFieldSettings';
 import { useFilters } from '@/store/useFilters';
+import { useSort } from '@/store/useSort';
 import { useTheme, spacing, borderRadius, shadows, typography } from '@/theme';
+import { getHashColor } from '@/utils/colors';
 
 export default function ReviewListScreen() {
   const router = useRouter();
   const { colors, isDark, toggleTheme } = useTheme();
   const { fieldSettings, loading: settingsLoading } = useFieldSettings();
   const { reviews, loading: reviewsLoading, createReview, reload } = useReviews(fieldSettings);
-  const { filters, updateFilters } = useFilters();
+  const { filters, updateFilters, clearFilters } = useFilters();
+  const { sort, clearSort } = useSort();
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
   const loading = settingsLoading || reviewsLoading;
@@ -27,7 +30,7 @@ export default function ReviewListScreen() {
   );
 
   const filteredReviews = useMemo(() => {
-    return reviews.filter((review) => {
+    const filtered = reviews.filter((review) => {
       if (review.status === 'draft') return false;
 
       for (const [fieldId, filter] of Object.entries(filters)) {
@@ -51,10 +54,37 @@ export default function ReviewListScreen() {
           const hasAllTags = filter.tags.every((t) => val.includes(t));
           if (!hasAllTags) return false;
         }
+
+        if (filter.labels && filter.labels.length > 0) {
+          if (typeof val !== 'string') return false;
+          const hasLabel = filter.labels.includes(val);
+          if (!hasLabel) return false;
+        }
       }
       return true;
     });
-  }, [reviews, filters]);
+
+    if (sort) {
+      filtered.sort((a, b) => {
+        const valA = a.fields[sort.fieldId];
+        const valB = b.fields[sort.fieldId];
+        
+        if (valA === valB) return 0;
+        if (valA === undefined || valA === null) return 1;
+        if (valB === undefined || valB === null) return -1;
+
+        const sortDir = sort.order === 'asc' ? 1 : -1;
+        
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return (valA - valB) * sortDir;
+        }
+        
+        return String(valA).localeCompare(String(valB)) * sortDir;
+      });
+    }
+
+    return filtered;
+  }, [reviews, filters, sort]);
 
   const handleCreate = async () => {
     const id = await createReview();
@@ -67,7 +97,7 @@ export default function ReviewListScreen() {
 
   // Count actual active filter criteria (not just field entries)
   const activeFilterChips = useMemo(() => {
-    const chips: { fieldId: string; type: 'range' | 'bool' | 'tag'; tagValue?: string; label: string }[] = [];
+    const chips: { fieldId: string; type: 'range' | 'bool' | 'tag' | 'label'; tagValue?: string; label: string; color?: { bg: string, text: string } }[] = [];
     for (const [fieldId, f] of Object.entries(filters)) {
       const setting = fieldSettings.find((s) => s.id === fieldId);
       if (!setting) continue;
@@ -84,7 +114,12 @@ export default function ReviewListScreen() {
       }
       if (f.tags && f.tags.length > 0) {
         f.tags.forEach((tag) => {
-          chips.push({ fieldId, type: 'tag', tagValue: tag, label: tag });
+          chips.push({ fieldId, type: 'tag', tagValue: tag, label: tag, color: getHashColor(tag) });
+        });
+      }
+      if (f.labels && f.labels.length > 0) {
+        f.labels.forEach((label) => {
+          chips.push({ fieldId, type: 'label', tagValue: label, label: label, color: getHashColor(label) });
         });
       }
     }
@@ -93,11 +128,11 @@ export default function ReviewListScreen() {
 
   const activeFilterCount = activeFilterChips.length;
 
-  const removeFilter = (fieldId: string, filterType: 'range' | 'bool' | 'tag', tagValue?: string) => {
+  const removeFilter = (fieldId: string, filterType: 'range' | 'bool' | 'tag' | 'label', tagValue?: string) => {
     const newFilters: typeof filters = {};
     for (const [fid, f] of Object.entries(filters)) {
       // deep-copy each filter entry to avoid mutating originals
-      newFilters[fid] = { ...f, tags: f.tags ? [...f.tags] : undefined };
+      newFilters[fid] = { ...f, tags: f.tags ? [...f.tags] : undefined, labels: f.labels ? [...f.labels] : undefined };
     }
 
     const f = newFilters[fieldId];
@@ -113,13 +148,19 @@ export default function ReviewListScreen() {
         f.tags = f.tags.filter((t) => t !== tagValue);
         if (f.tags.length === 0) f.tags = undefined;
       }
+    } else if (filterType === 'label' && tagValue) {
+      if (f.labels) {
+        f.labels = f.labels.filter((t) => t !== tagValue);
+        if (f.labels.length === 0) f.labels = undefined;
+      }
     }
 
     if (
       f.min === undefined &&
       f.max === undefined &&
       (f.bool === undefined || f.bool === null) &&
-      (!f.tags || f.tags.length === 0)
+      (!f.tags || f.tags.length === 0) &&
+      (!f.labels || f.labels.length === 0)
     ) {
       delete newFilters[fieldId];
     }
@@ -135,11 +176,11 @@ export default function ReviewListScreen() {
           {activeFilterChips.map((chip, i) => (
             <Pressable
               key={i}
-              style={[styles.activeFilterChip, { backgroundColor: colors.primaryLight }]}
+              style={[styles.activeFilterChip, { backgroundColor: chip.color ? chip.color.bg : colors.primaryLight, borderColor: chip.color ? chip.color.text + '44' : colors.primary + '44', borderWidth: 1 }]}
               onPress={() => removeFilter(chip.fieldId, chip.type, chip.tagValue)}
             >
-              <Text style={[styles.activeFilterText, { color: colors.primary }]}>{chip.label}</Text>
-              <Ionicons name="close-circle" size={15} color={colors.primary} />
+              <Text style={[styles.activeFilterText, { color: chip.color ? chip.color.text : colors.primary }]}>{chip.label}</Text>
+              <Ionicons name="close-circle" size={15} color={chip.color ? chip.color.text : colors.primary} />
             </Pressable>
           ))}
         </ScrollView>
@@ -160,11 +201,11 @@ export default function ReviewListScreen() {
       {activeFilterChips.map((chip, i) => (
         <Pressable
           key={i}
-          style={[styles.headerFilterChip, { backgroundColor: colors.primary + '22', borderColor: colors.primary + '55' }]}
+          style={[styles.headerFilterChip, { backgroundColor: chip.color ? chip.color.bg : colors.primary + '22', borderColor: chip.color ? chip.color.text + '55' : colors.primary + '55' }]}
           onPress={() => removeFilter(chip.fieldId, chip.type, chip.tagValue)}
         >
-          <Text style={[styles.headerFilterChipText, { color: colors.primary }]}>{chip.label}</Text>
-          <Ionicons name="close-circle" size={13} color={colors.primary} />
+          <Text style={[styles.headerFilterChipText, { color: chip.color ? chip.color.text : colors.primary }]}>{chip.label}</Text>
+          <Ionicons name="close-circle" size={13} color={chip.color ? chip.color.text : colors.primary} />
         </Pressable>
       ))}
     </ScrollView>
@@ -221,35 +262,66 @@ export default function ReviewListScreen() {
             contentContainerStyle={styles.filterBarScroll}
             style={styles.filterBarScrollContainer}
           >
-            <Pressable
-              onPress={() => router.push('/filters')}
+            <View
               style={[
-                styles.filterBtn,
+                styles.filterBtnGroup,
+                {
+                  backgroundColor: sort ? colors.primary : colors.surfaceSecondary,
+                  borderColor: sort ? colors.primary : colors.border,
+                },
+              ]}
+            >
+              <Pressable onPress={() => router.push('/sort')} style={styles.filterBtnPressable} hitSlop={4}>
+                <Ionicons
+                  name="swap-vertical"
+                  size={14}
+                  color={sort ? '#fff' : colors.textSecondary}
+                />
+                <Text style={[styles.filterBtnText, { color: sort ? '#fff' : colors.textSecondary }]}>
+                  Sort
+                </Text>
+              </Pressable>
+              {sort && (
+                <Pressable onPress={() => clearSort()} hitSlop={4} style={{ marginLeft: 6, padding: 2 }}>
+                  <Ionicons name="close-circle" size={16} color="#fff" />
+                </Pressable>
+              )}
+            </View>
+
+            <View
+              style={[
+                styles.filterBtnGroup,
                 {
                   backgroundColor: activeFilterCount > 0 ? colors.primary : colors.surfaceSecondary,
                   borderColor: activeFilterCount > 0 ? colors.primary : colors.border,
                 },
               ]}
-              hitSlop={4}
             >
-              <Ionicons
-                name="options-outline"
-                size={14}
-                color={activeFilterCount > 0 ? '#fff' : colors.textSecondary}
-              />
-              <Text style={[styles.filterBtnText, { color: activeFilterCount > 0 ? '#fff' : colors.textSecondary }]}>
-                Filters
-              </Text>
-            </Pressable>
+              <Pressable onPress={() => router.push('/filters')} style={styles.filterBtnPressable} hitSlop={4}>
+                <Ionicons
+                  name="options-outline"
+                  size={14}
+                  color={activeFilterCount > 0 ? '#fff' : colors.textSecondary}
+                />
+                <Text style={[styles.filterBtnText, { color: activeFilterCount > 0 ? '#fff' : colors.textSecondary }]}>
+                  Filters {activeFilterCount > 0 ? `(${activeFilterCount})` : ''}
+                </Text>
+              </Pressable>
+              {activeFilterCount > 0 && (
+                <Pressable onPress={() => clearFilters()} hitSlop={4} style={{ marginLeft: 6, padding: 2 }}>
+                  <Ionicons name="close-circle" size={16} color="#fff" />
+                </Pressable>
+              )}
+            </View>
 
             {activeFilterChips.map((chip, i) => (
               <Pressable
                 key={i}
-                style={[styles.activeFilterChip, { backgroundColor: colors.primaryLight, borderColor: colors.primary + '44' }]}
+                style={[styles.activeFilterChip, { backgroundColor: chip.color ? chip.color.bg : colors.primaryLight, borderColor: chip.color ? chip.color.text + '44' : colors.primary + '44', borderWidth: 1 }]}
                 onPress={() => removeFilter(chip.fieldId, chip.type, chip.tagValue)}
               >
-                <Text style={[styles.activeFilterText, { color: colors.primary }]}>{chip.label}</Text>
-                <Ionicons name="close-circle" size={14} color={colors.primary} />
+                <Text style={[styles.activeFilterText, { color: chip.color ? chip.color.text : colors.primary }]}>{chip.label}</Text>
+                <Ionicons name="close-circle" size={14} color={chip.color ? chip.color.text : colors.primary} />
               </Pressable>
             ))}
           </ScrollView>
@@ -418,14 +490,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
   },
-  filterBtn: {
+  filterBtnGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
     borderRadius: borderRadius.full,
     borderWidth: 1,
+  },
+  filterBtnPressable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   filterBtnText: {
     fontSize: 13,

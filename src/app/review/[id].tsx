@@ -171,14 +171,15 @@ export default function ReviewDetailScreen() {
                 </View>
               )}
 
-              {sortedSettings.map((setting) => (
-                <FieldRenderer
-                  key={setting.id}
-                  setting={setting}
-                  value={localFields[setting.id]}
-                  onChange={(value, extra) => handleFieldChange(setting.id, value, extra)}
-                  allReviews={reviews}
-                />
+              {sortedSettings.map((setting, index) => (
+                <View key={setting.id} style={{ zIndex: 1000 - index }}>
+                  <FieldRenderer
+                    setting={setting}
+                    value={localFields[setting.id]}
+                    onChange={(value, extra) => handleFieldChange(setting.id, value, extra)}
+                    allReviews={reviews}
+                  />
+                </View>
               ))}
             </View>
           </ScrollView>
@@ -232,7 +233,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.lg,
-    paddingBottom: spacing.xxxl + 20,
+    paddingBottom: spacing.xxxl + 120, // Increased bottom padding to leave space for action bar
   },
   card: {
     borderRadius: borderRadius.xl,

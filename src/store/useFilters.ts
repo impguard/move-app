@@ -5,6 +5,7 @@ export interface FieldFilter {
   max?: number;
   bool?: boolean | null; // null means 'Any'
   tags?: string[];
+  labels?: string[];
 }
 
 export type ActiveFilters = Record<string, FieldFilter>;

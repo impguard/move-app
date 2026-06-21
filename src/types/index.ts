@@ -6,7 +6,7 @@ export type FieldType =
   | 'number'
   | 'text'
   | 'label'
-  | 'single-line'  // legacy alias — treat same as label
+  | 'address'
   | 'link'
   | 'pictures'
   | 'sqft';
@@ -20,7 +20,11 @@ export interface FieldSetting {
   order: number;
   scoreMin?: number;
   scoreMax?: number;
-  isVisible?: boolean;
+  isVisible?: boolean; // Deprecated: Use isVisibleList instead
+  isVisibleList?: boolean;
+  isVisibleMap?: boolean;
+  isSortable?: boolean;
+  isFilterable?: boolean;
 }
 
 export interface Review {
@@ -35,17 +39,17 @@ export interface Review {
 }
 
 export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
-  'tag': 'Tag (multi-value)',
-  'label': 'Label (single-value)',
+  'label': 'Single-Tag',
+  'address': 'Address',
+  'tag': 'Multi-Tag',
+  'number': 'Number',
   'dollar': 'Dollar Amount',
+  'sqft': 'Square Footage',
   'score': 'Score',
   'boolean': 'Yes / No',
-  'number': 'Number',
   'text': 'Multi-line Text',
-  'single-line': 'Label (single-value)',  // legacy
   'link': 'Link',
   'pictures': 'Pictures',
-  'sqft': 'Square Footage',
 };
 
 export function getDefaultValue(type: FieldType): unknown {
@@ -53,7 +57,7 @@ export function getDefaultValue(type: FieldType): unknown {
     case 'tag':
       return [];
     case 'label':
-    case 'single-line':  // legacy
+    case 'address':
     case 'text':
     case 'link':
       return '';
