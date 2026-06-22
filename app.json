@@ -20,7 +20,8 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.impzter.moveapp"
+      "package": "com.impzter.moveapp",
+      "softwareKeyboardLayoutMode": "pan"
     },
     "web": {
       "output": "single",

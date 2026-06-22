@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text, Linking } from 'react-native';
 import MapView, { Marker, Callout, UrlTile } from 'react-native-maps';
 import { Review, FieldSetting } from '@/types';
 import { colors, typography, spacing } from '@/theme';
+import { formatShortAddress } from '@/utils/format';
 
 interface ReviewsMapProps {
   reviews: Review[];
@@ -88,10 +89,33 @@ export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings }
             <Callout onPress={() => onReviewPress(review.id)}>
               <View style={styles.callout}>
                 <Text style={styles.calloutTitle} numberOfLines={2}>
-                  {getAddress(review)}
+                  {formatShortAddress(getAddress(review))}
                 </Text>
                 {listVisibleSettings.map((s) => {
-                  const formatted = formatFieldValue(review.fields[s.id], s.type);
+                  const rawVal = review.fields[s.id];
+                  if (s.type === 'link' && rawVal && typeof rawVal === 'string') {
+                    let displayLink = rawVal;
+                    try {
+                      const match = rawVal.match(/:\/\/(www\.)?([^\/]+)/);
+                      if (match && match[2]) displayLink = match[2];
+                    } catch {}
+                    return (
+                      <View key={s.id} style={styles.fieldRow}>
+                        <Text style={styles.fieldKey}>{s.key}: </Text>
+                        <Text 
+                          style={[styles.fieldVal, { color: colors.primary, textDecorationLine: 'underline' }]}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            Linking.openURL(rawVal).catch(() => {});
+                          }}
+                        >
+                          {displayLink}
+                        </Text>
+                      </View>
+                    );
+                  }
+
+                  const formatted = formatFieldValue(rawVal, s.type);
                   if (!formatted) return null;
                   return (
                     <View key={s.id} style={styles.fieldRow}>

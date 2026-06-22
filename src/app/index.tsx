@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, FlatList, Pressable, Text, StyleSheet, ScrollView, Platform, Image } from 'react-native';
+import { View, FlatList, Pressable, Text, StyleSheet, ScrollView, Platform, Image, useWindowDimensions } from 'react-native';
 import { useRouter, useFocusEffect, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ReviewCard } from '@/components/ReviewCard';
@@ -20,6 +20,7 @@ export default function ReviewListScreen() {
   const { filters, updateFilters, clearFilters } = useFilters();
   const { sort, clearSort } = useSort();
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const { width } = useWindowDimensions();
 
   const loading = settingsLoading || reviewsLoading;
 
@@ -354,15 +355,26 @@ export default function ReviewListScreen() {
           )
         ) : viewMode === 'list' ? (
           <FlatList
+            key={Platform.OS === 'web' ? 'web-list' : `grid-${Math.max(1, Math.floor(width / 320))}`}
+            numColumns={Platform.OS === 'web' ? 1 : Math.max(1, Math.floor(width / 320))}
             data={filteredReviews}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <ReviewCard
-                review={item}
-                fieldSettings={fieldSettings}
-                onPress={() => router.push(`/review/${item.id}`)}
-              />
-            )}
+            renderItem={({ item }) => {
+              const numCols = Math.max(1, Math.floor(width / 320));
+              return (
+                <ReviewCard
+                  review={item}
+                  fieldSettings={fieldSettings}
+                  onPress={() => router.push(`/review/${item.id}`)}
+                  style={Platform.OS !== 'web' && numCols > 1 ? { flex: 1, marginHorizontal: 0 } : undefined}
+                />
+              );
+            }}
+            columnWrapperStyle={
+              Platform.OS !== 'web' && Math.max(1, Math.floor(width / 320)) > 1
+                ? { gap: spacing.lg, paddingHorizontal: spacing.lg }
+                : undefined
+            }
             contentContainerStyle={[
               styles.listContent,
               Platform.OS === 'web' && styles.listContentWeb,

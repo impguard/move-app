@@ -5,6 +5,7 @@ import L from 'leaflet';
 import { Review, FieldSetting } from '@/types';
 import { useMap } from 'react-leaflet';
 import { useTheme, spacing, borderRadius } from '@/theme';
+import { formatShortAddress } from '@/utils/format';
 
 // Fix missing marker icons in leaflet web
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -33,6 +34,8 @@ function formatFieldValue(value: unknown, type: FieldSetting['type']): string {
   }
 }
 
+import { useFocusEffect } from 'expo-router';
+
 function FitBounds({ markers }: { markers: Review[] }) {
   const map = useMap();
   React.useEffect(() => {
@@ -47,7 +50,19 @@ function FitBounds({ markers }: { markers: Review[] }) {
 export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings }: ReviewsMapProps) {
   const { colors } = useTheme();
   const markers = reviews.filter((r) => r.lat !== undefined && r.lng !== undefined);
-  const center = markers.length > 0 ? [markers[0].lat!, markers[0].lng!] : [39.8283, -98.5795];
+  const [isFocused, setIsFocused] = React.useState(true);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      setIsFocused(true);
+      return () => {
+        setIsFocused(false);
+      };
+    }, [])
+  );
+
+  // Center map on the first marker or default to USA
+  const center = markers.length > 0 ? [markers[0].lat, markers[0].lng] : [39.8283, -98.5795];
 
   // Visible settings excluding the core address field
   const mapVisibleSettings = fieldSettings.filter((s) => (s.isVisibleMap ?? s.isVisible ?? true) && !s.isCore);
@@ -72,12 +87,12 @@ export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings }
         zoom={markers.length > 0 ? 13 : 4}
         style={{ width: '100%', height: '100%' }}
       >
-        <FitBounds markers={markers} />
+        {isFocused && <FitBounds markers={markers} />}
         <TileLayer
           attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        {markers.map((review) => {
+        {isFocused && markers.map((review) => {
           return (
             <Marker
               key={review.id}
@@ -95,9 +110,31 @@ export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings }
               )}
               <Popup>
                 <div onClick={() => onReviewPress(review.id)} style={{ cursor: 'pointer' }}>
-                  <div style={{ fontWeight: 700, marginBottom: 6 }}>{getAddress(review)}</div>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>{formatShortAddress(getAddress(review))}</div>
                   {listVisibleSettings.map((s) => {
-                    const formatted = formatFieldValue(review.fields[s.id], s.type);
+                    const rawVal = review.fields[s.id];
+                    if (s.type === 'link' && rawVal && typeof rawVal === 'string') {
+                      let displayLink = rawVal;
+                      try {
+                        displayLink = new URL(rawVal).hostname.replace(/^www\./, '');
+                      } catch {}
+                      return (
+                        <div key={s.id} style={{ display: 'flex', marginBottom: 2 }}>
+                          <span style={{ fontSize: 12, color: '#666' }}>{s.key}:&nbsp;</span>
+                          <a 
+                            href={rawVal} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            onClick={(e) => e.stopPropagation()} 
+                            style={{ fontSize: 12, fontWeight: 600, color: colors.primary, textDecoration: 'underline' }}
+                          >
+                            {displayLink}
+                          </a>
+                        </div>
+                      );
+                    }
+
+                    const formatted = formatFieldValue(rawVal, s.type);
                     if (!formatted) return null;
                     return (
                       <div key={s.id} style={{ display: 'flex', marginBottom: 2 }}>

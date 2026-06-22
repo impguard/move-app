@@ -57,6 +57,28 @@ export default function ReviewDetailScreen() {
     }, [reload])
   );
 
+  // Allow Escape key to go back on Web
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        // If an input is focused, just blur it first instead of immediately going back
+        if (document.activeElement && ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+          (document.activeElement as HTMLElement).blur();
+          return;
+        }
+
+        if (router.canGoBack()) {
+          router.back();
+        } else {
+          router.replace('/');
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [router]);
+
   const handleFieldChange = useCallback((fieldId: string, value: unknown, extra?: { lat?: number; lng?: number }) => {
     if (isNew) {
       setLocalFields((prev) => ({ ...prev, [fieldId]: value }));

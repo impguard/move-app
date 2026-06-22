@@ -9,9 +9,10 @@ interface ReviewCardProps {
   review: Review;
   fieldSettings: FieldSetting[];
   onPress: () => void;
+  style?: any;
 }
 
-export function ReviewCard({ review, fieldSettings, onPress }: ReviewCardProps) {
+export function ReviewCard({ review, fieldSettings, onPress, style }: ReviewCardProps) {
   const { colors } = useTheme();
 
   const addressSetting = fieldSettings.find(f => f.key === 'Address');
@@ -41,6 +42,7 @@ export function ReviewCard({ review, fieldSettings, onPress }: ReviewCardProps) 
         styles.card,
         { backgroundColor: colors.surface },
         Platform.OS === 'web' && styles.cardWeb,
+        style,
         pressed && styles.cardPressed,
       ]}
     >

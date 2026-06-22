@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, Switch, Pressable, Linking, StyleSheet } from 'react-native';
 import { FieldSetting, Review } from '@/types';
 import { ScoreInput } from '@/components/ScoreInput';
@@ -10,40 +10,101 @@ import { useTheme, spacing, borderRadius, typography } from '@/theme';
 
 function DecimalInput({ value, onChange, placeholder, style, colors }: any) {
   const [text, setText] = useState(value != null && value !== 0 ? String(value) : '');
+  const [isFocused, setIsFocused] = useState(false);
+  const lastSentRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (value != null) {
       const valStr = String(value);
-      // Only update local text if it's materially different, to preserve trailing dots while typing
-      if (valStr !== text && parseFloat(valStr) !== parseFloat(text || '0')) {
-        setText(value === 0 ? '' : valStr);
+      // Only update from upstream if we aren't focused AND the upstream value is different from what we last sent
+      if (!isFocused && value !== lastSentRef.current) {
+        if (valStr !== text && parseFloat(valStr) !== parseFloat(text || '0')) {
+          setText(value === 0 ? '' : valStr);
+        }
       }
     }
-  }, [value, text]);
+  }, [value, text, isFocused]);
 
   return (
     <TextInput
       style={style}
       value={text}
+      onFocus={() => setIsFocused(true)}
       onChangeText={(val) => {
         let cleaned = val.replace(/[^0-9.]/g, '');
         const parts = cleaned.split('.');
         if (parts.length > 2) cleaned = parts[0] + '.' + parts.slice(1).join('');
         setText(cleaned);
 
-        if (cleaned === '') onChange(0);
-        else if (!cleaned.endsWith('.')) onChange(parseFloat(cleaned));
+        if (cleaned === '') {
+          lastSentRef.current = 0;
+          onChange(0);
+        }
+        else if (!cleaned.endsWith('.')) {
+          const num = parseFloat(cleaned);
+          lastSentRef.current = num;
+          onChange(num);
+        }
       }}
       onBlur={() => {
+        setIsFocused(false);
         if (text.endsWith('.')) {
           const num = parseFloat(text);
-          setText(isNaN(num) || num === 0 ? '' : String(num));
-          onChange(isNaN(num) ? 0 : num);
+          const finalVal = isNaN(num) ? 0 : num;
+          setText(finalVal === 0 ? '' : String(finalVal));
+          lastSentRef.current = finalVal;
+          onChange(finalVal);
         }
       }}
       placeholder={placeholder}
       placeholderTextColor={colors.textTertiary}
       keyboardType="decimal-pad"
+    />
+  );
+}
+
+function SyncTextInput({ value, onChange, ...props }: any) {
+  const [text, setText] = useState(value != null ? String(value) : '');
+  const [isFocused, setIsFocused] = useState(false);
+  const timeoutRef = useRef<any>(null);
+  const lastSentRef = useRef<string>(value != null ? String(value) : '');
+
+  // Only sync external changes if the user is NOT actively typing
+  // and the upstream value differs from our last optimistic save
+  useEffect(() => {
+    const strVal = String(value ?? '');
+    if (!isFocused && strVal !== text && strVal !== lastSentRef.current) {
+      setText(strVal);
+      lastSentRef.current = strVal; // Sync it so we don't repeatedly update
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, isFocused]);
+
+  return (
+    <TextInput
+      {...props}
+      value={text}
+      onFocus={(e) => {
+        setIsFocused(true);
+        props.onFocus?.(e);
+      }}
+      onBlur={(e) => {
+        setIsFocused(false);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        if (text !== String(value ?? '')) {
+          lastSentRef.current = text;
+          onChange(text);
+        }
+        props.onBlur?.(e);
+      }}
+      onChangeText={(val) => {
+        setText(val);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => {
+          lastSentRef.current = val;
+          onChange(val);
+        }, 500);
+      }}
     />
   );
 }
@@ -103,7 +164,7 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [] }: Fie
                   return (
                     <View style={[styles.tagChip, { backgroundColor: c.bg }]}>
                       <Text style={[styles.tagText, { color: c.text }]}>{value as string}</Text>
-                      <Pressable onPress={() => onChange('')} hitSlop={8} focusable={false}>
+                      <Pressable onPress={() => onChange('')} hitSlop={8} {...{ tabIndex: -1 }}>
                         <Text style={[styles.tagRemove, { color: c.text, marginLeft: 4 }]}>✕</Text>
                       </Pressable>
                     </View>
@@ -150,7 +211,7 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [] }: Fie
                       <Pressable 
                         onPress={() => onChange(tags.filter((_, index) => index !== i))} 
                         hitSlop={8}
-                        focusable={false}
+                        {...{ tabIndex: -1 }}
                       >
                         <Text style={[styles.tagRemove, { color: c.text, marginLeft: 4 }]}>✕</Text>
                       </Pressable>
@@ -188,14 +249,14 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [] }: Fie
 
       case 'text':
         return (
-          <TextInput
+          <SyncTextInput
             style={[
               styles.textInput,
               styles.multilineInput,
               { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight },
             ]}
-            value={String(value ?? '')}
-            onChangeText={(text) => onChange(text)}
+            value={value}
+            onChange={onChange}
             placeholder={`Enter ${setting.key.toLowerCase()}...`}
             placeholderTextColor={colors.textTertiary}
             multiline
@@ -344,13 +405,13 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [] }: Fie
 
       default:
         return (
-          <TextInput
+          <SyncTextInput
             style={[
               styles.textInput,
               { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight },
             ]}
-            value={String(value ?? '')}
-            onChangeText={(text) => onChange(text)}
+            value={value}
+            onChange={onChange}
             placeholder="Enter value..."
             placeholderTextColor={colors.textTertiary}
           />

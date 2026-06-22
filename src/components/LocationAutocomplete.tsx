@@ -16,23 +16,24 @@ interface Suggestion {
 }
 
 export function LocationAutocomplete({ value, onChange, placeholder }: LocationAutocompleteProps) {
-  // Internal query is purely for display - it does NOT drive the parent until confirmed
   const [query, setQuery] = useState(value);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  
+  const lastSavedAddressRef = useRef(value);
+  const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Keep query in sync if parent value changes externally (e.g. loading a saved review)
-  const prevValueRef = useRef(value);
+  // Sync upstream if external change happens
   useEffect(() => {
-    if (value !== prevValueRef.current) {
-      prevValueRef.current = value;
+    if (value !== lastSavedAddressRef.current) {
+      lastSavedAddressRef.current = value;
       setQuery(value);
     }
   }, [value]);
 
   useEffect(() => {
-    if (!query || !showSuggestions) {
+    if (!query || !showSuggestions || query === lastSavedAddressRef.current) {
       setSuggestions([]);
       return;
     }
@@ -44,11 +45,7 @@ export function LocationAutocomplete({ value, onChange, placeholder }: LocationA
           `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
             query
           )}&format=json&addressdetails=1&limit=5`,
-          {
-            headers: {
-              'User-Agent': 'MoveApp/1.0',
-            },
-          }
+          { headers: { 'User-Agent': 'MoveApp/1.0' } }
         );
         const data = await response.json();
         setSuggestions(data);
@@ -62,19 +59,39 @@ export function LocationAutocomplete({ value, onChange, placeholder }: LocationA
     return () => clearTimeout(delayDebounceFn);
   }, [query, showSuggestions]);
 
+  const commitAddress = async (text: string, lat?: number, lng?: number) => {
+    lastSavedAddressRef.current = text;
+    setQuery(text);
+    setShowSuggestions(false);
+
+    if (lat !== undefined && lng !== undefined) {
+      // We have explicit coordinates from a dropdown selection
+      onChange(text, lat, lng);
+    } else {
+      // Auto-resolve GPS from raw text if they didn't pick a dropdown item
+      if (text.trim() === '') {
+        onChange(text, undefined, undefined);
+        return;
+      }
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&limit=1`);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          onChange(text, parseFloat(data[0].lat), parseFloat(data[0].lon));
+        } else {
+          onChange(text, undefined, undefined);
+        }
+      } catch (e) {
+        onChange(text, undefined, undefined);
+      }
+    }
+  };
+
   const handleSelect = useCallback((suggestion: Suggestion) => {
+    if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
     const lat = parseFloat(suggestion.lat);
     const lng = parseFloat(suggestion.lon);
-    const name = suggestion.display_name;
-
-    // Update internal display
-    setQuery(name);
-    prevValueRef.current = name;
-    setShowSuggestions(false);
-    setSuggestions([]);
-
-    // Notify parent ONCE with confirmed name + coords
-    onChange(name, lat, lng);
+    commitAddress(suggestion.display_name, lat, lng);
   }, [onChange]);
 
   return (
@@ -88,10 +105,12 @@ export function LocationAutocomplete({ value, onChange, placeholder }: LocationA
         }}
         onFocus={() => setShowSuggestions(true)}
         onBlur={() => {
-          if (query !== value) {
-            onChange(query, undefined, undefined);
-          }
-          setTimeout(() => setShowSuggestions(false), 300);
+          blurTimeoutRef.current = setTimeout(() => {
+            if (query !== lastSavedAddressRef.current) {
+              commitAddress(query);
+            }
+            setShowSuggestions(false);
+          }, 300);
         }}
         placeholder={placeholder || 'Search address...'}
         placeholderTextColor={colors.textTertiary}
@@ -109,7 +128,7 @@ export function LocationAutocomplete({ value, onChange, placeholder }: LocationA
           <FlatList
             data={suggestions}
             keyExtractor={(item) => item.place_id}
-            keyboardShouldPersistTaps="handled"
+            keyboardShouldPersistTaps="always"
             renderItem={({ item }) => (
               <Pressable
                 style={({ pressed }) => [styles.suggestionItem, pressed && styles.suggestionItemPressed]}
