@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, Image, Pressable, ScrollView, StyleSheet, Alert, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, Pressable, ScrollView, StyleSheet, Alert, Platform, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, borderRadius } from '@/theme';
+import { uploadImageToStorage } from '@/store/storageSync';
 
 interface PictureFieldProps {
   value: string[];
@@ -9,7 +10,33 @@ interface PictureFieldProps {
 }
 
 export function PictureField({ value, onChange }: PictureFieldProps) {
-  const pickImage = async () => {
+  const [isUploading, setIsUploading] = useState(false);
+
+  const processAssets = async (assets: ImagePicker.ImagePickerAsset[]) => {
+    setIsUploading(true);
+    try {
+      const uploadPromises = assets.map(async (asset) => {
+        let uriToUpload = asset.uri;
+        if (Platform.OS === 'web' && asset.base64) {
+          uriToUpload = `data:image/jpeg;base64,${asset.base64}`;
+        }
+        return await uploadImageToStorage(uriToUpload);
+      });
+      const uploadedUris = await Promise.all(uploadPromises);
+      onChange([...value, ...uploadedUris]);
+    } catch (e) {
+      console.warn('Upload failed', e);
+      if (Platform.OS !== 'web') {
+        Alert.alert('Upload Failed', 'Failed to upload image. Please try again.');
+      } else {
+        window.alert('Upload failed. Please try again.');
+      }
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const launchLibrary = async () => {
     const permResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permResult.granted) {
       if (Platform.OS !== 'web') {
@@ -26,14 +53,42 @@ export function PictureField({ value, onChange }: PictureFieldProps) {
     });
 
     if (!result.canceled && result.assets) {
-      const newUris = result.assets.map((asset) => {
-        if (Platform.OS === 'web' && asset.base64) {
-          return `data:image/jpeg;base64,${asset.base64}`;
-        }
-        return asset.uri;
-      });
-      onChange([...value, ...newUris]);
+      await processAssets(result.assets);
     }
+  };
+
+  const launchCamera = async () => {
+    const permResult = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permResult.granted) {
+      if (Platform.OS !== 'web') Alert.alert('Permission needed', 'Please allow camera access.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
+      base64: Platform.OS === 'web',
+    });
+
+    if (!result.canceled && result.assets) {
+      await processAssets(result.assets);
+    }
+  };
+
+  const pickImage = () => {
+    if (Platform.OS === 'web') {
+      launchLibrary();
+      return;
+    }
+    Alert.alert(
+      'Add Photo',
+      'Choose photo source',
+      [
+        { text: 'Take Photo', onPress: launchCamera },
+        { text: 'Choose from Library', onPress: launchLibrary },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
   };
 
   const removeImage = (index: number) => {
@@ -57,9 +112,15 @@ export function PictureField({ value, onChange }: PictureFieldProps) {
               </Pressable>
             </View>
           ))}
-          <Pressable onPress={pickImage} style={styles.addButton}>
-            <Text style={styles.addIcon}>+</Text>
-            <Text style={styles.addLabel}>Add</Text>
+          <Pressable onPress={pickImage} style={styles.addButton} disabled={isUploading}>
+            {isUploading ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <>
+                <Text style={styles.addIcon}>+</Text>
+                <Text style={styles.addLabel}>Add</Text>
+              </>
+            )}
           </Pressable>
         </View>
       </ScrollView>

@@ -36,7 +36,7 @@ export interface Review {
   hasDuplicate?: boolean;
   lat?: number;
   lng?: number;
-  status?: 'draft' | 'saved';
+  status?: 'draft' | 'saved' | 'taken';
 }
 
 export const FIELD_TYPE_LABELS: Record<FieldType, string> = {

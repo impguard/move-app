@@ -16,9 +16,21 @@ export function NetworkIndicator() {
   useEffect(() => {
     let mounted = true;
     
+    let firestoreTimeout: NodeJS.Timeout;
+    
     // Track Firestore specific connection state
     const unsubFirestore = addConnectionListener((connected) => {
-      if (mounted) setIsFirestoreConnected(connected);
+      if (!mounted) return;
+      if (connected) {
+        clearTimeout(firestoreTimeout);
+        setIsFirestoreConnected(true);
+      } else {
+        // Delay showing the disconnected warning to avoid initial load flashes
+        clearTimeout(firestoreTimeout);
+        firestoreTimeout = setTimeout(() => {
+          if (mounted) setIsFirestoreConnected(false);
+        }, 2000);
+      }
     });
     
     // For Web, use native navigator online/offline events for immediate reaction

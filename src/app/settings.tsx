@@ -11,7 +11,7 @@ import { createDefaultFieldSettings } from '@/utils/defaults';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
-import { Stack, useFocusEffect } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useCallback, useState } from 'react';
 import {
@@ -40,6 +40,7 @@ export default function SettingsScreen() {
   } = useFieldSettings();
   const { syncFieldsToReviews, reviews, reload: reloadReviews } = useReviews(fieldSettings);
   const { syncKey, changeSyncKey } = useSyncKey();
+  const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
   const [showKeyInput, setShowKeyInput] = useState(false);
   const [keyInputValue, setKeyInputValue] = useState('');
@@ -268,6 +269,11 @@ export default function SettingsScreen() {
       <Stack.Screen
         options={{
           title: 'Review Fields',
+          headerLeft: () => (
+            <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/')} style={{ marginLeft: Platform.OS === 'web' ? 16 : 0, marginRight: 16 }}>
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </Pressable>
+          ),
         }}
       />
       <KeyboardAvoidingView
@@ -287,7 +293,7 @@ export default function SettingsScreen() {
             automaticallyAdjustKeyboardInsets={true}
             contentInsetAdjustmentBehavior="automatic"
           >
-            <Text style={styles.description}>
+            <Text style={[styles.description, { color: colors.textSecondary }]}>
               Configure the fields that appear on every review. Adding or removing a field affects all reviews.
             </Text>
 

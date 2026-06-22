@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, FlatList, Pressable, Text, StyleSheet, ScrollView, Platform, Image, useWindowDimensions } from 'react-native';
-import { useRouter, useFocusEffect, Stack } from 'expo-router';
+import { View, FlatList, Pressable, Text, StyleSheet, ScrollView, Platform, Image, useWindowDimensions, TextInput } from 'react-native';
+import { useRouter, useFocusEffect, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ReviewCard } from '@/components/ReviewCard';
 import { ReviewsMap } from '@/components/ReviewsMap';
@@ -17,12 +17,61 @@ export default function ReviewListScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
   const { fieldSettings, loading: settingsLoading } = useFieldSettings();
   const { reviews, loading: reviewsLoading, createReview, reload } = useReviews(fieldSettings);
-  const { filters, updateFilters, clearFilters } = useFilters();
+  const { filters, searchQuery, hideTaken, updateFilters, setSearchQuery, clearFilters, _initFromUrl } = useFilters();
   const { sort, clearSort } = useSort();
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [showMapLabels, setShowMapLabels] = useState(true);
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const [isUrlInitialized, setIsUrlInitialized] = useState(false);
+  const params = useLocalSearchParams<{ filters?: string; search?: string; sort?: string; hideTaken?: string; view?: 'list' | 'map'; labels?: string; searchOpen?: string }>();
   const { width } = useWindowDimensions();
+  const isNarrow = width < 768;
 
   const loading = settingsLoading || reviewsLoading;
+
+  React.useEffect(() => {
+    if (!isUrlInitialized) {
+      let initF = filters;
+      let initQ = searchQuery;
+      let initHT = hideTaken;
+      if (params.filters) {
+        try { initF = JSON.parse(decodeURIComponent(params.filters)); } catch(e) {}
+      }
+      if (params.search !== undefined) {
+        initQ = params.search;
+      }
+      if (params.hideTaken !== undefined) {
+        initHT = params.hideTaken === '1';
+      }
+      _initFromUrl(initF, initQ, initHT);
+      
+      if (params.view === 'map') setViewMode('map');
+      if (params.labels === '0') setShowMapLabels(false);
+      
+      setIsUrlInitialized(true);
+      if (initQ || params.searchOpen === '1') setIsSearchActive(true);
+    }
+  }, [params, isUrlInitialized, _initFromUrl, filters, searchQuery, hideTaken]);
+
+  React.useEffect(() => {
+    if (isUrlInitialized) {
+      const fStr = Object.keys(filters).length > 0 ? JSON.stringify(filters) : '';
+      const sStr = sort ? JSON.stringify(sort) : '';
+      
+      const newParams: Record<string, string | undefined> = {};
+      
+      // Setting to undefined in Expo Router effectively deletes the param
+      newParams.filters = fStr || undefined;
+      newParams.search = searchQuery || undefined;
+      newParams.sort = sStr || undefined;
+      newParams.hideTaken = hideTaken ? '1' : undefined;
+      newParams.view = viewMode === 'map' ? 'map' : undefined;
+      newParams.labels = !showMapLabels ? '0' : undefined;
+      newParams.searchOpen = isSearchActive && !searchQuery ? '1' : undefined;
+
+      router.setParams(newParams);
+    }
+  }, [filters, searchQuery, sort, hideTaken, viewMode, showMapLabels, isSearchActive, isUrlInitialized, router]);
 
   useFocusEffect(
     useCallback(() => {
@@ -31,8 +80,9 @@ export default function ReviewListScreen() {
   );
 
   const filteredReviews = useMemo(() => {
-    const filtered = reviews.filter((review) => {
+    let filtered = reviews.filter((review) => {
       if (review.status === 'draft') return false;
+      if (hideTaken && review.status === 'taken') return false;
 
       for (const [fieldId, filter] of Object.entries(filters)) {
         const val = review.fields[fieldId];
@@ -95,8 +145,17 @@ export default function ReviewListScreen() {
       });
     }
 
+    if (searchQuery.trim() !== '') {
+      const lowerQuery = searchQuery.toLowerCase();
+      filtered = filtered.filter((r) => {
+        const addressSetting = fieldSettings.find((s) => s.isCore);
+        const address = addressSetting ? String(r.fields[addressSetting.id] || '') : '';
+        return address.toLowerCase().includes(lowerQuery);
+      });
+    }
+
     return filtered;
-  }, [reviews, filters, sort]);
+  }, [reviews, filters, sort, searchQuery, hideTaken, fieldSettings]);
 
   const handleCreate = () => {
     router.push('/review/new');
@@ -202,29 +261,14 @@ export default function ReviewListScreen() {
     );
   };
 
-  // Custom header title: "Move" + filter chips inline
+  // Custom header title: "Move"
   const HeaderTitle = useCallback(() => (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.headerTitleRow}
-      style={styles.headerTitleScroll}
-    >
+    <View style={styles.headerTitleRow}>
       <Image source={require('../../assets/images/icon.png')} style={{ width: 28, height: 28 }} />
       <Text style={[styles.appTitle, { color: colors.text }]}>Move</Text>
-      {activeFilterChips.map((chip, i) => (
-        <Pressable
-          key={i}
-          style={[styles.headerFilterChip, { backgroundColor: chip.color ? chip.color.bg : colors.primary + '22', borderColor: chip.color ? chip.color.text + '55' : colors.primary + '55' }]}
-          onPress={() => removeFilter(chip.fieldId, chip.type, chip.tagValue)}
-        >
-          <Text style={[styles.headerFilterChipText, { color: chip.color ? chip.color.text : colors.primary }]}>{chip.label}</Text>
-          <Ionicons name="close-circle" size={13} color={chip.color ? chip.color.text : colors.primary} />
-        </Pressable>
-      ))}
-    </ScrollView>
+    </View>
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ), [activeFilterChips, colors]);
+  ), [colors]);
 
   return (
     <>
@@ -276,59 +320,116 @@ export default function ReviewListScreen() {
             contentContainerStyle={styles.filterBarScroll}
             style={styles.filterBarScrollContainer}
           >
-            <View
-              style={[
-                styles.filterBtnGroup,
-                {
-                  backgroundColor: sort ? colors.primary : colors.surfaceSecondary,
-                  borderColor: sort ? colors.primary : colors.border,
-                },
-              ]}
-            >
-              <Pressable onPress={() => router.push('/sort')} style={styles.filterBtnPressable} hitSlop={4}>
-                <Ionicons
-                  name="swap-vertical"
-                  size={14}
-                  color={sort ? '#fff' : colors.textSecondary}
+            {isSearchActive ? (
+              <View style={[styles.searchContainer, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
+                <Ionicons name="search" size={16} color={colors.textSecondary} />
+                <TextInput
+                  style={[styles.searchInput, { color: colors.text }]}
+                  placeholder="Search address..."
+                  placeholderTextColor={colors.textTertiary}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  onBlur={() => {
+                    if (searchQuery.trim() === '') {
+                      setIsSearchActive(false);
+                    }
+                  }}
+                  autoFocus
                 />
-                <Text style={[styles.filterBtnText, { color: sort ? '#fff' : colors.textSecondary }]}>
-                  Sort
-                </Text>
-              </Pressable>
-              {sort && (
-                <Pressable onPress={() => clearSort()} hitSlop={4} style={{ marginLeft: 6, padding: 2 }}>
-                  <Ionicons name="close-circle" size={16} color="#fff" />
+                <Pressable onPress={() => { setIsSearchActive(false); setSearchQuery(''); }} hitSlop={8}>
+                  <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
                 </Pressable>
-              )}
-            </View>
-
-            <View
-              style={[
-                styles.filterBtnGroup,
-                {
-                  backgroundColor: activeFilterCount > 0 ? colors.primary : colors.surfaceSecondary,
-                  borderColor: activeFilterCount > 0 ? colors.primary : colors.border,
-                },
-              ]}
-            >
-              <Pressable onPress={() => router.push('/filters')} style={styles.filterBtnPressable} hitSlop={4}>
-                <Ionicons
-                  name="options-outline"
-                  size={14}
-                  color={activeFilterCount > 0 ? '#fff' : colors.textSecondary}
-                />
-                <Text style={[styles.filterBtnText, { color: activeFilterCount > 0 ? '#fff' : colors.textSecondary }]}>
-                  Filters {activeFilterCount > 0 ? `(${activeFilterCount})` : ''}
-                </Text>
+              </View>
+            ) : (
+              <Pressable
+                style={[styles.filterBtnGroup, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border, gap: 4 }]}
+                onPress={() => setIsSearchActive(true)}
+              >
+                <Ionicons name="search" size={14} color={colors.textSecondary} />
+                <Text style={[styles.filterBtnText, { color: colors.textSecondary }]}>Search</Text>
               </Pressable>
-              {activeFilterCount > 0 && (
-                <Pressable onPress={() => clearFilters()} hitSlop={4} style={{ marginLeft: 6, padding: 2 }}>
-                  <Ionicons name="close-circle" size={16} color="#fff" />
-                </Pressable>
-              )}
-            </View>
+            )}
 
-            {activeFilterChips.map((chip, i) => (
+            {!isSearchActive && (
+              <>
+                {viewMode !== 'map' ? (
+                  <View
+                    style={[
+                      styles.filterBtnGroup,
+                      {
+                        backgroundColor: sort ? colors.primary : colors.surfaceSecondary,
+                        borderColor: sort ? colors.primary : colors.border,
+                      },
+                    ]}
+                  >
+                    <Pressable onPress={() => router.push('/sort')} style={styles.filterBtnPressable} hitSlop={4}>
+                      <Ionicons
+                        name="swap-vertical"
+                        size={14}
+                        color={sort ? '#fff' : colors.textSecondary}
+                      />
+                      <Text style={[styles.filterBtnText, { color: sort ? '#fff' : colors.textSecondary }]}>
+                        Sort
+                      </Text>
+                    </Pressable>
+                    {sort && (
+                      <Pressable onPress={() => clearSort()} hitSlop={4} style={{ marginLeft: 6, padding: 2 }}>
+                        <Ionicons name="close-circle" size={16} color="#fff" />
+                      </Pressable>
+                    )}
+                  </View>
+                ) : (
+                  <Pressable
+                    style={[
+                      styles.filterBtnGroup,
+                      {
+                        backgroundColor: showMapLabels ? colors.primary : colors.surfaceSecondary,
+                        borderColor: showMapLabels ? colors.primary : colors.border,
+                        gap: 4,
+                      },
+                    ]}
+                    onPress={() => setShowMapLabels(!showMapLabels)}
+                  >
+                    <Ionicons
+                      name={showMapLabels ? "eye" : "eye-off"}
+                      size={14}
+                      color={showMapLabels ? '#fff' : colors.textSecondary}
+                    />
+                    <Text style={[styles.filterBtnText, { color: showMapLabels ? '#fff' : colors.textSecondary }]}>
+                      Labels
+                    </Text>
+                  </Pressable>
+                )}
+
+                <View
+                  style={[
+                    styles.filterBtnGroup,
+                    {
+                      backgroundColor: activeFilterCount > 0 ? colors.primary : colors.surfaceSecondary,
+                      borderColor: activeFilterCount > 0 ? colors.primary : colors.border,
+                    },
+                  ]}
+                >
+                  <Pressable onPress={() => router.push('/filters')} style={styles.filterBtnPressable} hitSlop={4}>
+                    <Ionicons
+                      name="options-outline"
+                      size={14}
+                      color={activeFilterCount > 0 ? '#fff' : colors.textSecondary}
+                    />
+                    <Text style={[styles.filterBtnText, { color: activeFilterCount > 0 ? '#fff' : colors.textSecondary }]}>
+                      Filters {activeFilterCount > 0 ? `(${activeFilterCount})` : ''}
+                    </Text>
+                  </Pressable>
+                  {activeFilterCount > 0 && (
+                    <Pressable onPress={() => clearFilters()} hitSlop={4} style={{ marginLeft: 6, padding: 2 }}>
+                      <Ionicons name="close-circle" size={16} color="#fff" />
+                    </Pressable>
+                  )}
+                </View>
+              </>
+            )}
+
+            {!isNarrow && activeFilterChips.map((chip, i) => (
               <Pressable
                 key={i}
                 style={[styles.activeFilterChip, { backgroundColor: chip.color ? chip.color.bg : colors.primaryLight, borderColor: chip.color ? chip.color.text + '44' : colors.primary + '44', borderWidth: 1 }]}
@@ -340,6 +441,26 @@ export default function ReviewListScreen() {
             ))}
           </ScrollView>
         </View>
+
+        {isNarrow && activeFilterChips.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={[styles.filterBarScroll, { paddingLeft: spacing.lg, paddingBottom: spacing.sm }]}
+            style={{ flexGrow: 0, flexShrink: 0 }}
+          >
+            {activeFilterChips.map((chip, i) => (
+              <Pressable
+                key={i}
+                style={[styles.activeFilterChip, { backgroundColor: chip.color ? chip.color.bg : colors.primaryLight, borderColor: chip.color ? chip.color.text + '44' : colors.primary + '44', borderWidth: 1 }]}
+                onPress={() => removeFilter(chip.fieldId, chip.type, chip.tagValue)}
+              >
+                <Text style={[styles.activeFilterText, { color: chip.color ? chip.color.text : colors.primary }]}>{chip.label}</Text>
+                <Ionicons name="close-circle" size={14} color={chip.color ? chip.color.text : colors.primary} />
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
 
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -384,6 +505,7 @@ export default function ReviewListScreen() {
         ) : (
           <ReviewsMap
             reviews={filteredReviews}
+            showLabels={showMapLabels}
             onReviewPress={(id) => router.push(`/review/${id}`)}
             fieldSettings={fieldSettings}
             getAddress={(r) => {
@@ -518,6 +640,7 @@ const styles = StyleSheet.create({
   filterBtnGroup: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
     borderRadius: borderRadius.full,
@@ -526,12 +649,31 @@ const styles = StyleSheet.create({
   filterBtnPressable: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
   },
   filterBtnText: {
     fontSize: 13,
     fontWeight: '600',
+    marginTop: Platform.OS === 'ios' ? 1 : -1,
   },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    minWidth: 150,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: spacing.xs,
+    fontSize: 13,
+    paddingVertical: 4,
+    minWidth: 100,
+    outlineStyle: 'none',
+  } as any,
   headerIconBtn: {
     padding: spacing.sm,
   },

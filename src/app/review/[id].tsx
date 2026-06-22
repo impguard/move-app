@@ -264,13 +264,34 @@ export default function ReviewDetailScreen() {
         {(!loading && (isNew || review)) && (
           <View style={[styles.actionBar, { backgroundColor: colors.surface }]}>
             {!isNew ? (
-              <Pressable
-                onPress={handleDelete}
-                style={({ pressed }) => [styles.trashBtn, pressed && { backgroundColor: colors.danger + '22' }]}
-                hitSlop={8}
-              >
-                <Ionicons name="trash-outline" size={24} color={colors.danger} />
-              </Pressable>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Pressable
+                  onPress={handleDelete}
+                  style={({ pressed }) => [styles.trashBtn, pressed && { backgroundColor: colors.danger + '22' }]}
+                  hitSlop={8}
+                >
+                  <Ionicons name="trash-outline" size={24} color={colors.danger} />
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    const newStatus = review?.status === 'taken' ? 'saved' : 'taken';
+                    updateReview(id!, {}, { status: newStatus });
+                  }}
+                  style={({ pressed }) => [
+                    styles.takenBtn,
+                    review?.status === 'taken' && { backgroundColor: colors.warning + '22' },
+                    pressed && { opacity: 0.7 }
+                  ]}
+                  hitSlop={8}
+                >
+                  <Ionicons 
+                    name={review?.status === 'taken' ? "ban" : "ban-outline"} 
+                    size={24} 
+                    color={review?.status === 'taken' ? colors.warning : colors.textSecondary} 
+                  />
+                </Pressable>
+              </View>
             ) : (
               <View /> // Spacer
             )}
@@ -388,6 +409,14 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   trashBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
+  },
+  takenBtn: {
     width: 48,
     height: 48,
     borderRadius: 24,

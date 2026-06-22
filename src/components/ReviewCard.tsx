@@ -35,6 +35,8 @@ export function ReviewCard({ review, fieldSettings, onPress, style }: ReviewCard
     );
   };
 
+  const isTaken = review.status === 'taken';
+
   return (
     <Pressable
       onPress={onPress}
@@ -43,13 +45,21 @@ export function ReviewCard({ review, fieldSettings, onPress, style }: ReviewCard
         { backgroundColor: colors.surface },
         Platform.OS === 'web' && styles.cardWeb,
         style,
+        isTaken && { opacity: 0.65, backgroundColor: colors.surfaceSecondary },
         pressed && styles.cardPressed,
       ]}
     >
       <View style={styles.cardHeader}>
-        <Text style={[styles.address, { color: colors.text }]} numberOfLines={1}>
-          {address || 'New Property'}
-        </Text>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', marginRight: spacing.sm }}>
+          <Text style={[styles.address, { color: colors.text, textDecorationLine: isTaken ? 'line-through' : 'none' }]} numberOfLines={1}>
+            {address || 'New Property'}
+          </Text>
+          {isTaken && (
+            <View style={[styles.takenBadge, { backgroundColor: colors.danger + '22' }]}>
+              <Text style={[styles.takenText, { color: colors.danger }]}>TAKEN</Text>
+            </View>
+          )}
+        </View>
         <Text style={[styles.time, { color: colors.textTertiary }]}>{formatRelativeDate(review.updatedAt)}</Text>
       </View>
 
@@ -166,6 +176,17 @@ const styles = StyleSheet.create({
     ...typography.heading,
     flex: 1,
     marginRight: spacing.sm,
+  },
+  takenBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  takenText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   time: {
     ...typography.small,

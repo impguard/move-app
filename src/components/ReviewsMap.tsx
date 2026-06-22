@@ -10,6 +10,7 @@ interface ReviewsMapProps {
   onReviewPress: (id: string) => void;
   getAddress: (review: Review) => string;
   fieldSettings: FieldSetting[];
+  showLabels?: boolean;
 }
 
 function formatFieldValue(value: unknown, type: FieldSetting['type']): string {
@@ -24,7 +25,7 @@ function formatFieldValue(value: unknown, type: FieldSetting['type']): string {
   }
 }
 
-export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings }: ReviewsMapProps) {
+export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings, showLabels = true }: ReviewsMapProps) {
   const mapRef = useRef<MapView>(null);
 
   const markers = reviews.filter((r) => r.lat !== undefined && r.lng !== undefined);
@@ -67,11 +68,11 @@ export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings }
           <Marker
             key={review.id}
             coordinate={{ latitude: review.lat!, longitude: review.lng! }}
-            centerOffset={{ x: 0, y: -10 }}
+            anchor={{ x: 0.5, y: 0.5 }}
           >
             <View style={styles.customMarkerContainer}>
-              <View style={styles.markerDot} />
-              {mapVisibleSettings.length > 0 && (
+              <View style={[styles.markerDot, review.status === 'taken' && { backgroundColor: '#999', borderColor: '#eee' }]} />
+              {showLabels && mapVisibleSettings.length > 0 && (
                 <View style={styles.markerLabel}>
                   {mapVisibleSettings.map((s) => {
                     const formatted = formatFieldValue(review.fields[s.id], s.type);
@@ -169,7 +170,8 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   markerLabel: {
-    marginTop: 2,
+    position: 'absolute',
+    bottom: 16,
     backgroundColor: 'rgba(255,255,255,0.9)',
     paddingHorizontal: 4,
     paddingVertical: 2,

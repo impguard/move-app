@@ -37,6 +37,9 @@ function ensureFirestoreListener() {
   firestoreListenerRegistered = true;
   addSettingsUpdateListener((settings) => {
     globalLoading = false;
+    if (settings.length > 0) {
+      setItem(FIELD_SETTINGS_KEY, settings).catch(() => {});
+    }
     notifyAll(settings);
   });
 }

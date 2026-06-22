@@ -1,18 +1,31 @@
-import React from 'react';
-import { View, StyleSheet, Text, Pressable } from 'react-native';
-import { MapContainer, TileLayer, Marker, Tooltip, Popup } from 'react-leaflet';
-import L from 'leaflet';
-import { Review, FieldSetting } from '@/types';
-import { useMap } from 'react-leaflet';
-import { useTheme, spacing, borderRadius } from '@/theme';
+import { useTheme } from '@/theme';
+import { FieldSetting, Review } from '@/types';
 import { formatShortAddress } from '@/utils/format';
+import L from 'leaflet';
+import React from 'react';
+import { MapContainer, Marker, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet';
+import { StyleSheet, Text, View } from 'react-native';
 
 // Fix missing marker icons in leaflet web
 delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+const activeIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [0, -42],
+  tooltipAnchor: [0.5, -42],
+  shadowSize: [41, 41]
+});
+
+const takenIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [0, -42],
+  tooltipAnchor: [0.5, -42],
+  shadowSize: [41, 41]
 });
 
 interface ReviewsMapProps {
@@ -20,6 +33,7 @@ interface ReviewsMapProps {
   onReviewPress: (id: string) => void;
   getAddress: (review: Review) => string;
   fieldSettings: FieldSetting[];
+  showLabels?: boolean;
 }
 
 function formatFieldValue(value: unknown, type: FieldSetting['type']): string {
@@ -47,7 +61,7 @@ function FitBounds({ markers }: { markers: Review[] }) {
   return null;
 }
 
-export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings }: ReviewsMapProps) {
+export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings, showLabels = true }: ReviewsMapProps) {
   const { colors } = useTheme();
   const markers = reviews.filter((r) => r.lat !== undefined && r.lng !== undefined);
   const [isFocused, setIsFocused] = React.useState(true);
@@ -97,14 +111,15 @@ export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings }
             <Marker
               key={review.id}
               position={[review.lat!, review.lng!]}
+              icon={(review as any).status === 'taken' ? takenIcon : activeIcon}
             >
-              {renderLabel(review, mapVisibleSettings).length > 0 && (
-                  <Tooltip
-                    permanent
-                    direction="top"
-                    offset={[-15, -15]}
-                    className="move-tooltip"
-                  >
+              {showLabels && renderLabel(review, mapVisibleSettings).length > 0 && (
+                <Tooltip
+                  permanent
+                  direction="top"
+                  offset={[0, 0]}
+                  className="move-tooltip"
+                >
                   <div className="move-tooltip-text">{renderLabel(review, mapVisibleSettings)}</div>
                 </Tooltip>
               )}
@@ -117,15 +132,15 @@ export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings }
                       let displayLink = rawVal;
                       try {
                         displayLink = new URL(rawVal).hostname.replace(/^www\./, '');
-                      } catch {}
+                      } catch { }
                       return (
                         <div key={s.id} style={{ display: 'flex', marginBottom: 2 }}>
                           <span style={{ fontSize: 12, color: '#666' }}>{s.key}:&nbsp;</span>
-                          <a 
-                            href={rawVal} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            onClick={(e) => e.stopPropagation()} 
+                          <a
+                            href={rawVal}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             style={{ fontSize: 12, fontWeight: 600, color: colors.primary, textDecoration: 'underline' }}
                           >
                             {displayLink}

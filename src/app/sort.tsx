@@ -34,14 +34,20 @@ export default function SortScreen() {
     <>
       <Stack.Screen
         options={{
-          presentation: 'transparentModal',
+          presentation: Platform.OS === 'web' ? 'transparentModal' : 'modal',
           headerShown: false,
-          animation: 'fade',
+          animation: Platform.OS === 'web' ? 'fade' : 'default',
         }}
       />
-      <View style={styles.backdropContainer}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={() => router.back()} />
-        <View style={[styles.sheetContent, { backgroundColor: colors.background }]}>
+      <View style={[styles.backdropContainer, Platform.OS !== 'web' && { backgroundColor: colors.background, justifyContent: 'flex-start' }]}>
+        {Platform.OS === 'web' && (
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => router.back()} />
+        )}
+        <View style={[
+          styles.sheetContent,
+          { backgroundColor: colors.background },
+          Platform.OS !== 'web' && styles.sheetContentNative
+        ]}>
           <View style={[styles.dragHandle, { backgroundColor: colors.borderLight }]} />
           <View style={styles.headerRow}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>Sort</Text>
@@ -130,6 +136,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     boxShadow: '0 -4px 16px rgba(0,0,0,0.2)',
     elevation: 24,
+  },
+  sheetContentNative: {
+    maxHeight: '100%',
+    flex: 1,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    boxShadow: 'none',
+    elevation: 0,
   },
   dragHandle: {
     width: 40,

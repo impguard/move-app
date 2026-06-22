@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, Text, Pressable, TextInput, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, ScrollView, Text, Pressable, TextInput, StyleSheet, KeyboardAvoidingView, Platform, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useFieldSettings } from '@/store/useFieldSettings';
@@ -13,17 +13,20 @@ export default function FiltersScreen() {
   const { colors } = useTheme();
   const { fieldSettings } = useFieldSettings();
   const { reviews } = useReviews(fieldSettings);
-  const { filters, updateFilters, clearFilters } = useFilters();
+  const { filters, updateFilters, clearFilters, hideTaken, setHideTaken } = useFilters();
 
   const [localFilters, setLocalFilters] = useState<ActiveFilters>(filters);
+  const [localHideTaken, setLocalHideTaken] = useState(hideTaken);
 
   const handleApply = () => {
     updateFilters(localFilters);
+    setHideTaken(localHideTaken);
     router.back();
   };
 
   const handleClear = () => {
     clearFilters();
+    setLocalHideTaken(false);
     router.back();
   };
 
@@ -107,15 +110,21 @@ export default function FiltersScreen() {
     <>
       <Stack.Screen
         options={{
-          presentation: 'transparentModal',
+          presentation: Platform.OS === 'web' ? 'transparentModal' : 'modal',
           headerShown: false,
-          animation: 'fade',
+          animation: Platform.OS === 'web' ? 'fade' : 'default',
         }}
       />
-      <View style={styles.backdropContainer}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={() => router.back()} />
+      <View style={[styles.backdropContainer, Platform.OS !== 'web' && { backgroundColor: colors.background, justifyContent: 'flex-start' }]}>
+        {Platform.OS === 'web' && (
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => router.back()} />
+        )}
         <KeyboardAvoidingView
-          style={[styles.sheetContent, { backgroundColor: colors.background }]}
+          style={[
+            styles.sheetContent,
+            { backgroundColor: colors.background },
+            Platform.OS !== 'web' && styles.sheetContentNative
+          ]}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
@@ -134,6 +143,17 @@ export default function FiltersScreen() {
             automaticallyAdjustKeyboardInsets={true}
             contentInsetAdjustmentBehavior="automatic"
           >
+            <View style={[styles.filterSection, { backgroundColor: colors.surface, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+              <View>
+                <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 4 }]}>Property Status</Text>
+                <Text style={{ fontSize: 12, color: colors.textTertiary }}>Hide properties marked as taken</Text>
+              </View>
+              <Switch 
+                value={localHideTaken} 
+                onValueChange={setLocalHideTaken} 
+                trackColor={{ true: colors.primary }}
+              />
+            </View>
         {filterableSettings.length === 0 && (
           <View style={[styles.emptyCard, { backgroundColor: colors.surface }]}>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>No filterable fields</Text>
@@ -177,7 +197,7 @@ export default function FiltersScreen() {
                   />
                 </View>
                 {getPresets(setting.id, setting.type) && (
-                  <View style={styles.presetsRow}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: spacing.md }} contentContainerStyle={styles.presetsRow}>
                     {getPresets(setting.id, setting.type)!.map((p, i) => {
                       const isSelected = currentFilter.min === p.min && currentFilter.max === p.max;
                       return (
@@ -191,15 +211,15 @@ export default function FiltersScreen() {
                           onPress={() => updateLocalFilter(setting.id, { min: p.min, max: p.max })}
                         >
                           <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                            <Text style={[styles.presetText, { fontWeight: '600', opacity: 0 }]}>{p.label}</Text>
-                            <Text style={[styles.presetText, { position: 'absolute', color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
+                            <Text numberOfLines={1} style={[styles.presetText, { fontWeight: '600', opacity: 0 }]}>{p.label}</Text>
+                            <Text numberOfLines={1} style={[styles.presetText, { position: 'absolute', color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
                               {p.label}
                             </Text>
                           </View>
                         </Pressable>
                       );
                     })}
-                  </View>
+                  </ScrollView>
                 )}
               </View>
             );
@@ -346,6 +366,14 @@ const styles = StyleSheet.create({
     boxShadow: '0 -4px 16px rgba(0,0,0,0.2)',
     elevation: 24,
   },
+  sheetContentNative: {
+    maxHeight: '100%',
+    flex: 1,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    boxShadow: 'none',
+    elevation: 0,
+  },
   dragHandle: {
     width: 40,
     height: 4,
@@ -436,9 +464,7 @@ const styles = StyleSheet.create({
   },
   presetsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: spacing.sm,
-    marginTop: spacing.md,
   },
   presetChip: {
     paddingHorizontal: spacing.sm,
