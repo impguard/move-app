@@ -103,7 +103,7 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [] }: Fie
                   return (
                     <View style={[styles.tagChip, { backgroundColor: c.bg }]}>
                       <Text style={[styles.tagText, { color: c.text }]}>{value as string}</Text>
-                      <Pressable onPress={() => onChange('')} hitSlop={8}>
+                      <Pressable onPress={() => onChange('')} hitSlop={8} focusable={false}>
                         <Text style={[styles.tagRemove, { color: c.text, marginLeft: 4 }]}>✕</Text>
                       </Pressable>
                     </View>
@@ -147,9 +147,10 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [] }: Fie
                   return (
                     <View key={i} style={[styles.tagChip, { backgroundColor: c.bg }]}>
                       <Text style={[styles.tagText, { color: c.text }]}>{t}</Text>
-                      <Pressable
-                        onPress={() => onChange(tags.filter((_, index) => index !== i))}
+                      <Pressable 
+                        onPress={() => onChange(tags.filter((_, index) => index !== i))} 
                         hitSlop={8}
+                        focusable={false}
                       >
                         <Text style={[styles.tagRemove, { color: c.text, marginLeft: 4 }]}>✕</Text>
                       </Pressable>
