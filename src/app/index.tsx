@@ -95,6 +95,14 @@ export default function ReviewListScreen() {
           const numVal = Number(val);
           if (isNaN(numVal) || numVal > filter.max) return false;
         }
+        
+        if (filter.bedsMin !== undefined || filter.bedsMax !== undefined || filter.bathsMin !== undefined || filter.bathsMax !== undefined) {
+          const bb = (val || {}) as any;
+          if (filter.bedsMin !== undefined && ((bb.beds ?? 0) < filter.bedsMin)) return false;
+          if (filter.bedsMax !== undefined && ((bb.beds ?? 0) > filter.bedsMax)) return false;
+          if (filter.bathsMin !== undefined && ((bb.baths ?? 0) < filter.bathsMin)) return false;
+          if (filter.bathsMax !== undefined && ((bb.baths ?? 0) > filter.bathsMax)) return false;
+        }
 
         if (filter.bool !== undefined) {
           if (filter.bool === null) {
@@ -137,6 +145,14 @@ export default function ReviewListScreen() {
 
         const sortDir = sort.order === 'asc' ? 1 : -1;
         
+        if (typeof valA === 'object' && valA !== null && 'beds' in valA) {
+          const bbA = valA as any;
+          const bbB = (valB || {}) as any;
+          const scoreA = (bbA.beds || 0) * 100 + (bbA.baths || 0);
+          const scoreB = (bbB.beds || 0) * 100 + (bbB.baths || 0);
+          return (scoreA - scoreB) * sortDir;
+        }
+        
         if (typeof valA === 'number' && typeof valB === 'number') {
           return (valA - valB) * sortDir;
         }
@@ -167,7 +183,7 @@ export default function ReviewListScreen() {
 
   // Count actual active filter criteria (not just field entries)
   const activeFilterChips = useMemo(() => {
-    const chips: { fieldId: string; type: 'range' | 'bool' | 'tag' | 'label'; tagValue?: string; label: string; color?: { bg: string, text: string } }[] = [];
+    const chips: { fieldId: string; type: 'range' | 'bool' | 'tag' | 'label' | 'beds_baths'; tagValue?: string; label: string; color?: { bg: string, text: string } }[] = [];
     for (const [fieldId, f] of Object.entries(filters)) {
       const setting = fieldSettings.find((s) => s.id === fieldId);
       if (!setting) continue;
@@ -179,6 +195,28 @@ export default function ReviewListScreen() {
         else label += `≤ ${f.max}`;
         chips.push({ fieldId, type: 'range', label });
       }
+      
+      if (f.bedsMin !== undefined || f.bedsMax !== undefined || f.bathsMin !== undefined || f.bathsMax !== undefined) {
+        let label = setting.key + ': ';
+        const parts = [];
+        if (f.bedsMin !== undefined || f.bedsMax !== undefined) {
+          let b = 'Beds ';
+          if (f.bedsMin !== undefined && f.bedsMax !== undefined) b += `${f.bedsMin}–${f.bedsMax}`;
+          else if (f.bedsMin !== undefined) b += `≥${f.bedsMin}`;
+          else b += `≤${f.bedsMax}`;
+          parts.push(b);
+        }
+        if (f.bathsMin !== undefined || f.bathsMax !== undefined) {
+          let b = 'Baths ';
+          if (f.bathsMin !== undefined && f.bathsMax !== undefined) b += `${f.bathsMin}–${f.bathsMax}`;
+          else if (f.bathsMin !== undefined) b += `≥${f.bathsMin}`;
+          else b += `≤${f.bathsMax}`;
+          parts.push(b);
+        }
+        label += parts.join(', ');
+        chips.push({ fieldId, type: 'beds_baths', label });
+      }
+      
       if (f.bool !== undefined) {
         let boolLabel = 'Unknown';
         if (f.bool === true) boolLabel = 'Yes';
@@ -201,7 +239,7 @@ export default function ReviewListScreen() {
 
   const activeFilterCount = activeFilterChips.length;
 
-  const removeFilter = (fieldId: string, filterType: 'range' | 'bool' | 'tag' | 'label', tagValue?: string) => {
+  const removeFilter = (fieldId: string, filterType: 'range' | 'bool' | 'tag' | 'label' | 'beds_baths', tagValue?: string) => {
     const newFilters: typeof filters = {};
     for (const [fid, f] of Object.entries(filters)) {
       // deep-copy each filter entry to avoid mutating originals
@@ -226,6 +264,11 @@ export default function ReviewListScreen() {
         f.labels = f.labels.filter((t) => t !== tagValue);
         if (f.labels.length === 0) f.labels = undefined;
       }
+    } else if (filterType === 'beds_baths') {
+      f.bedsMin = undefined;
+      f.bedsMax = undefined;
+      f.bathsMin = undefined;
+      f.bathsMax = undefined;
     }
 
     if (
@@ -233,7 +276,11 @@ export default function ReviewListScreen() {
       f.max === undefined &&
       f.bool === undefined &&
       (!f.tags || f.tags.length === 0) &&
-      (!f.labels || f.labels.length === 0)
+      (!f.labels || f.labels.length === 0) &&
+      f.bedsMin === undefined &&
+      f.bedsMax === undefined &&
+      f.bathsMin === undefined &&
+      f.bathsMax === undefined
     ) {
       delete newFilters[fieldId];
     }
@@ -264,7 +311,7 @@ export default function ReviewListScreen() {
   // Custom header title: "Move"
   const HeaderTitle = useCallback(() => (
     <View style={styles.headerTitleRow}>
-      <Image source={require('../../assets/images/icon.png')} style={{ width: 28, height: 28 }} />
+      <Image source={require('../../assets/images/icon-transparent.png')} style={{ width: 28, height: 28 }} />
       <Text style={[styles.appTitle, { color: colors.text }]}>Move</Text>
     </View>
   // eslint-disable-next-line react-hooks/exhaustive-deps

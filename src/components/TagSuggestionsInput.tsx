@@ -31,6 +31,7 @@ export function TagSuggestionsInput({
 }: TagSuggestionsInputProps) {
   const { colors } = useTheme();
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<TextInput>(null);
 
   const filtered = inputText.trim()
@@ -40,6 +41,11 @@ export function TagSuggestionsInput({
           v.toLowerCase() !== inputText.toLowerCase()
       )
     : existingValues;
+
+  // Reset selection when input changes
+  React.useEffect(() => {
+    setSelectedIndex(-1);
+  }, [inputText]);
 
   const handleSelect = useCallback(
     (val: string) => {
@@ -52,13 +58,17 @@ export function TagSuggestionsInput({
   );
 
   const handleSubmitEditing = useCallback(() => {
+    if (selectedIndex >= 0 && selectedIndex < filtered.length) {
+      handleSelect(filtered[selectedIndex]);
+      return;
+    }
     const trimmed = inputText.trim();
     if (trimmed) {
       onSubmit(trimmed);
       onInputChange('');
       setShowSuggestions(false);
     }
-  }, [inputText, onSubmit, onInputChange]);
+  }, [inputText, onSubmit, onInputChange, selectedIndex, filtered, handleSelect]);
 
   return (
     <View style={styles.container}>
@@ -78,12 +88,22 @@ export function TagSuggestionsInput({
           setShowSuggestions(true);
         }}
         onKeyPress={(e: any) => {
-          if (e.nativeEvent.key === 'Tab') {
-            const trimmed = inputText.trim();
-            if (trimmed) {
-              onSubmit(trimmed);
-              onInputChange('');
-              setShowSuggestions(false);
+          if (e.nativeEvent.key === 'ArrowDown') {
+            e.preventDefault?.();
+            setSelectedIndex((prev) => Math.min(prev + 1, filtered.length - 1));
+          } else if (e.nativeEvent.key === 'ArrowUp') {
+            e.preventDefault?.();
+            setSelectedIndex((prev) => Math.max(prev - 1, -1));
+          } else if (e.nativeEvent.key === 'Tab') {
+            if (selectedIndex >= 0 && selectedIndex < filtered.length) {
+              handleSelect(filtered[selectedIndex]);
+            } else {
+              const trimmed = inputText.trim();
+              if (trimmed) {
+                onSubmit(trimmed);
+                onInputChange('');
+                setShowSuggestions(false);
+              }
             }
           }
         }}
@@ -110,12 +130,12 @@ export function TagSuggestionsInput({
             keyExtractor={(item) => item}
             keyboardShouldPersistTaps="handled"
             style={styles.list}
-            renderItem={({ item }) => (
+            renderItem={({ item, index }) => (
               <Pressable
                 style={({ pressed }) => [
                   styles.suggestion,
                   { borderBottomColor: colors.borderLight },
-                  pressed && { backgroundColor: colors.surfaceSecondary },
+                  (pressed || index === selectedIndex) && { backgroundColor: colors.surfaceSecondary },
                 ]}
                 onPress={() => handleSelect(item)}
               >

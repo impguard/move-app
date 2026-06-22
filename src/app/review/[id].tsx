@@ -161,6 +161,10 @@ export default function ReviewDetailScreen() {
   const activeLat = isNew ? localExtra.lat : review?.lat;
   const activeLng = isNew ? localExtra.lng : review?.lng;
 
+  const isDuplicate = addressValue 
+    ? reviews.some(r => r.id !== (isNew ? 'new' : id) && r.fields[addressField?.id || ''] === addressValue)
+    : false;
+
   return (
     <>
       <Stack.Screen
@@ -192,7 +196,14 @@ export default function ReviewDetailScreen() {
             automaticallyAdjustKeyboardInsets={true}
             contentInsetAdjustmentBehavior="automatic"
           >
-            {!isNew && review?.hasDuplicate && (
+            {isDuplicate && (
+              <View style={[styles.duplicateBanner, { backgroundColor: colors.warning + '22', borderColor: colors.warning }]}>
+                <Text style={[styles.duplicateText, { color: colors.warning }]}>
+                  ⚠️ Another review already exists with this exact address.
+                </Text>
+              </View>
+            )}
+            {!isNew && review?.hasDuplicate && !isDuplicate && (
               <View style={[styles.duplicateBanner, { backgroundColor: colors.warning + '22', borderColor: colors.warning }]}>
                 <Text style={[styles.duplicateText, { color: colors.warning }]}>
                   ⚠️ This review may be a duplicate of an existing review.

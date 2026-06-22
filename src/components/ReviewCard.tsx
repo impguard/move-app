@@ -134,6 +134,13 @@ export function ReviewCard({ review, fieldSettings, onPress, style }: ReviewCard
             } else if (setting.type === 'pictures' && Array.isArray(value)) {
               if (value.length === 0) return null;
               displayValue = `${value.length} photos`;
+            } else if (setting.type === 'beds_baths') {
+              const bb = value as { beds?: number; baths?: number };
+              const parts = [];
+              if (bb?.beds != null) parts.push(`${bb.beds} Bed`);
+              if (bb?.baths != null) parts.push(`${bb.baths} Bath`);
+              if (parts.length === 0) return null;
+              displayValue = parts.join(' / ');
             }
 
             return (

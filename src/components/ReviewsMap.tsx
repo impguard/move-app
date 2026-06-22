@@ -21,6 +21,14 @@ function formatFieldValue(value: unknown, type: FieldSetting['type']): string {
     case 'score': return `⭐ ${value}`;
     case 'boolean': return value ? '✓' : '✗';
     case 'tag': return Array.isArray(value) ? (value as string[]).join(', ') : String(value);
+    case 'beds_baths': {
+      const bb = value as { beds?: number; baths?: number };
+      if (!bb) return '';
+      const parts = [];
+      if (bb.beds != null) parts.push(`${bb.beds} Bed`);
+      if (bb.baths != null) parts.push(`${bb.baths} Bath`);
+      return parts.join(' / ');
+    }
     default: return String(value);
   }
 }

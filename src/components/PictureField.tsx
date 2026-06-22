@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Image, Pressable, ScrollView, StyleSheet, Alert, Platform, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { colors, spacing, borderRadius } from '@/theme';
+import { useTheme, spacing, borderRadius } from '@/theme';
 import { uploadImageToStorage } from '@/store/storageSync';
 
 interface PictureFieldProps {
@@ -11,6 +11,7 @@ interface PictureFieldProps {
 
 export function PictureField({ value, onChange }: PictureFieldProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const { colors } = useTheme();
 
   const processAssets = async (assets: ImagePicker.ImagePickerAsset[]) => {
     setIsUploading(true);
@@ -102,7 +103,7 @@ export function PictureField({ value, onChange }: PictureFieldProps) {
         <View style={styles.row}>
           {value.map((uri, index) => (
             <View key={index} style={styles.imageWrapper}>
-              <Image source={{ uri }} style={styles.image} />
+              <Image source={{ uri }} style={[styles.image, { backgroundColor: colors.surfaceSecondary }]} />
               <Pressable
                 onPress={() => removeImage(index)}
                 style={styles.removeButton}
@@ -112,13 +113,17 @@ export function PictureField({ value, onChange }: PictureFieldProps) {
               </Pressable>
             </View>
           ))}
-          <Pressable onPress={pickImage} style={styles.addButton} disabled={isUploading}>
+          <Pressable 
+            onPress={pickImage} 
+            style={[styles.addButton, { borderColor: colors.border, backgroundColor: colors.surfaceSecondary }]} 
+            disabled={isUploading}
+          >
             {isUploading ? (
               <ActivityIndicator size="small" color={colors.primary} />
             ) : (
               <>
-                <Text style={styles.addIcon}>+</Text>
-                <Text style={styles.addLabel}>Add</Text>
+                <Text style={[styles.addIcon, { color: colors.textTertiary }]}>+</Text>
+                <Text style={[styles.addLabel, { color: colors.textTertiary }]}>Add</Text>
               </>
             )}
           </Pressable>
@@ -149,7 +154,6 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.surfaceSecondary,
   },
   removeButton: {
     position: 'absolute',
@@ -172,20 +176,16 @@ const styles = StyleSheet.create({
     height: 88,
     borderRadius: borderRadius.md,
     borderWidth: 2,
-    borderColor: colors.border,
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surfaceSecondary,
   },
   addIcon: {
     fontSize: 24,
-    color: colors.textTertiary,
     fontWeight: '300',
   },
   addLabel: {
     fontSize: 12,
-    color: colors.textTertiary,
     marginTop: 2,
   },
 });

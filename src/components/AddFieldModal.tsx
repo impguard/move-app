@@ -30,6 +30,7 @@ const FIELD_TYPES: FieldType[] = [
   'text',
   'link',
   'pictures',
+  'beds_baths',
 ];
 
 export function AddFieldModal({ visible, onClose, onAdd }: AddFieldModalProps) {

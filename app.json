@@ -4,11 +4,11 @@
     "slug": "move-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/icon-transparent.png",
     "scheme": "moveapp",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/app-icon-ios.png",
       "bundleIdentifier": "com.impzter.moveapp",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -17,7 +17,7 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
-        "foregroundImage": "./assets/images/android-icon-foreground.png"
+        "foregroundImage": "./assets/images/app-icon-android.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.impzter.moveapp",
@@ -25,7 +25,7 @@
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/app-icon-web.png"
     },
     "plugins": [
       "expo-router",

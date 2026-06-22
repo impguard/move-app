@@ -301,6 +301,40 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [] }: Fie
           </View>
         );
 
+      case 'beds_baths': {
+        const bb = (value || { beds: null, baths: null }) as any;
+        return (
+          <View style={{ flexDirection: 'row', gap: spacing.md }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 10, fontWeight: '600', color: colors.textTertiary, marginBottom: 4 }}>BEDS</Text>
+              <DecimalInput
+                style={[
+                  styles.textInput,
+                  { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight },
+                ]}
+                value={bb.beds}
+                onChange={(beds: number) => onChange({ ...bb, beds })}
+                placeholder="0"
+                colors={colors}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 10, fontWeight: '600', color: colors.textTertiary, marginBottom: 4 }}>BATHS</Text>
+              <DecimalInput
+                style={[
+                  styles.textInput,
+                  { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight },
+                ]}
+                value={bb.baths}
+                onChange={(baths: number) => onChange({ ...bb, baths })}
+                placeholder="0"
+                colors={colors}
+              />
+            </View>
+          </View>
+        );
+      }
+
       case 'number':
         return (
           <DecimalInput

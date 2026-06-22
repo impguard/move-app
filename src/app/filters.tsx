@@ -39,7 +39,11 @@ export default function FiltersScreen() {
         updated.max === undefined &&
         updated.bool === undefined &&
         (!updated.tags || updated.tags.length === 0) &&
-        (!updated.labels || updated.labels.length === 0)
+        (!updated.labels || updated.labels.length === 0) &&
+        updated.bedsMin === undefined &&
+        updated.bedsMax === undefined &&
+        updated.bathsMin === undefined &&
+        updated.bathsMax === undefined
       ) {
         const next = { ...prev };
         delete next[id];
@@ -102,8 +106,38 @@ export default function FiltersScreen() {
     ];
   };
 
+  const getBedsBathsPresets = (settingId: string, subField: 'beds' | 'baths') => {
+    const values = reviews
+      .map((r) => {
+        const bb = r.fields[settingId] as { beds?: number; baths?: number };
+        if (!bb) return NaN;
+        return Number(bb[subField]);
+      })
+      .filter((v) => !isNaN(v) && v !== 0);
+
+    if (values.length === 0) return null;
+
+    const uniqueValues = Array.from(new Set(values)).sort((a, b) => a - b);
+    
+    if (uniqueValues.length <= 4) {
+      return uniqueValues.map(v => ({ label: String(v), min: v, max: v }));
+    }
+
+    const min = Math.min(...uniqueValues);
+    const max = Math.max(...uniqueValues);
+    const step = (max - min) / 3;
+    const p1Max = Math.round(min + step);
+    const p2Max = Math.round(min + step * 2);
+
+    return [
+      { label: `Up to ${p1Max}`, min: undefined, max: p1Max },
+      { label: `${p1Max} – ${p2Max}`, min: p1Max, max: p2Max },
+      { label: `Over ${p2Max}`, min: p2Max, max: undefined },
+    ];
+  };
+
   const filterableSettings = fieldSettings.filter((s) =>
-    s.isFilterable !== false && ['score', 'dollar', 'sqft', 'number', 'boolean', 'tag', 'label', 'address'].includes(s.type)
+    s.isFilterable !== false && ['score', 'dollar', 'sqft', 'number', 'boolean', 'tag', 'label', 'address', 'beds_baths'].includes(s.type)
   );
 
   return (
@@ -209,6 +243,118 @@ export default function FiltersScreen() {
                             isSelected && { backgroundColor: colors.primaryLight, borderColor: colors.primary },
                           ]}
                           onPress={() => updateLocalFilter(setting.id, { min: p.min, max: p.max })}
+                        >
+                          <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                            <Text numberOfLines={1} style={[styles.presetText, { fontWeight: '600', opacity: 0 }]}>{p.label}</Text>
+                            <Text numberOfLines={1} style={[styles.presetText, { position: 'absolute', color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
+                              {p.label}
+                            </Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                )}
+              </View>
+            );
+          }
+          
+          if (setting.type === 'beds_baths') {
+            return (
+              <View key={setting.id} style={[styles.filterSection, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>{setting.key}</Text>
+                
+                <Text style={[styles.label, { color: colors.textTertiary, fontSize: 12, marginTop: 4, marginBottom: 8 }]}>Beds Range</Text>
+                <View style={styles.rangeRow}>
+                  <TextInput
+                    style={[styles.rangeInput, { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight }]}
+                    placeholder="Min"
+                    placeholderTextColor={colors.textTertiary}
+                    keyboardType="numeric"
+                    value={currentFilter.bedsMin !== undefined ? String(currentFilter.bedsMin) : ''}
+                    onChangeText={(t) => {
+                      const num = parseFloat(t);
+                      updateLocalFilter(setting.id, { bedsMin: isNaN(num) ? undefined : num });
+                    }}
+                  />
+                  <Text style={[styles.rangeDash, { color: colors.textSecondary }]}>–</Text>
+                  <TextInput
+                    style={[styles.rangeInput, { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight }]}
+                    placeholder="Max"
+                    placeholderTextColor={colors.textTertiary}
+                    keyboardType="numeric"
+                    value={currentFilter.bedsMax !== undefined ? String(currentFilter.bedsMax) : ''}
+                    onChangeText={(t) => {
+                      const num = parseFloat(t);
+                      updateLocalFilter(setting.id, { bedsMax: isNaN(num) ? undefined : num });
+                    }}
+                  />
+                </View>
+                {getBedsBathsPresets(setting.id, 'beds') && (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: spacing.md }} contentContainerStyle={styles.presetsRow}>
+                    {getBedsBathsPresets(setting.id, 'beds')!.map((p, i) => {
+                      const isSelected = currentFilter.bedsMin === p.min && currentFilter.bedsMax === p.max;
+                      return (
+                        <Pressable
+                          key={i}
+                          style={[
+                            styles.presetChip,
+                            { backgroundColor: colors.surfaceSecondary, borderColor: colors.borderLight },
+                            isSelected && { backgroundColor: colors.primaryLight, borderColor: colors.primary },
+                          ]}
+                          onPress={() => updateLocalFilter(setting.id, { bedsMin: p.min, bedsMax: p.max })}
+                        >
+                          <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                            <Text numberOfLines={1} style={[styles.presetText, { fontWeight: '600', opacity: 0 }]}>{p.label}</Text>
+                            <Text numberOfLines={1} style={[styles.presetText, { position: 'absolute', color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
+                              {p.label}
+                            </Text>
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                )}
+
+                <Text style={[styles.label, { color: colors.textTertiary, fontSize: 12, marginTop: 16, marginBottom: 8 }]}>Baths Range</Text>
+                <View style={styles.rangeRow}>
+                  <TextInput
+                    style={[styles.rangeInput, { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight }]}
+                    placeholder="Min"
+                    placeholderTextColor={colors.textTertiary}
+                    keyboardType="numeric"
+                    value={currentFilter.bathsMin !== undefined ? String(currentFilter.bathsMin) : ''}
+                    onChangeText={(t) => {
+                      const num = parseFloat(t);
+                      updateLocalFilter(setting.id, { bathsMin: isNaN(num) ? undefined : num });
+                    }}
+                  />
+                  <Text style={[styles.rangeDash, { color: colors.textSecondary }]}>–</Text>
+                  <TextInput
+                    style={[styles.rangeInput, { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight }]}
+                    placeholder="Max"
+                    placeholderTextColor={colors.textTertiary}
+                    keyboardType="numeric"
+                    value={currentFilter.bathsMax !== undefined ? String(currentFilter.bathsMax) : ''}
+                    onChangeText={(t) => {
+                      const num = parseFloat(t);
+                      updateLocalFilter(setting.id, { bathsMax: isNaN(num) ? undefined : num });
+                    }}
+                  />
+                </View>
+                {getBedsBathsPresets(setting.id, 'baths') && (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: spacing.md }} contentContainerStyle={styles.presetsRow}>
+                    {getBedsBathsPresets(setting.id, 'baths')!.map((p, i) => {
+                      const isSelected = currentFilter.bathsMin === p.min && currentFilter.bathsMax === p.max;
+                      return (
+                        <Pressable
+                          key={i}
+                          style={[
+                            styles.presetChip,
+                            { backgroundColor: colors.surfaceSecondary, borderColor: colors.borderLight },
+                            isSelected && { backgroundColor: colors.primaryLight, borderColor: colors.primary },
+                          ]}
+                          onPress={() => updateLocalFilter(setting.id, { bathsMin: p.min, bathsMax: p.max })}
                         >
                           <View style={{ alignItems: 'center', justifyContent: 'center' }}>
                             <Text numberOfLines={1} style={[styles.presetText, { fontWeight: '600', opacity: 0 }]}>{p.label}</Text>

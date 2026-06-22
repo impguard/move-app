@@ -1,4 +1,4 @@
-import { borderRadius, colors, spacing, typography } from '@/theme';
+import { borderRadius, spacing, typography, useTheme } from '@/theme';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -20,6 +20,8 @@ export function LocationAutocomplete({ value, onChange, placeholder }: LocationA
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const { colors } = useTheme();
   
   const lastSavedAddressRef = useRef(value);
   const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -31,6 +33,10 @@ export function LocationAutocomplete({ value, onChange, placeholder }: LocationA
       setQuery(value);
     }
   }, [value]);
+
+  useEffect(() => {
+    setSelectedIndex(-1);
+  }, [query]);
 
   useEffect(() => {
     if (!query || !showSuggestions || query === lastSavedAddressRef.current) {
@@ -97,13 +103,33 @@ export function LocationAutocomplete({ value, onChange, placeholder }: LocationA
   return (
     <View style={styles.container}>
       <TextInput
-        style={styles.textInput}
+        style={[
+          styles.textInput,
+          { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight }
+        ]}
         value={query}
         onChangeText={(text) => {
           setQuery(text);
           setShowSuggestions(true);
         }}
         onFocus={() => setShowSuggestions(true)}
+        onKeyPress={(e: any) => {
+          if (e.nativeEvent.key === 'ArrowDown') {
+            e.preventDefault?.();
+            setSelectedIndex((prev) => Math.min(prev + 1, suggestions.length - 1));
+          } else if (e.nativeEvent.key === 'ArrowUp') {
+            e.preventDefault?.();
+            setSelectedIndex((prev) => Math.max(prev - 1, -1));
+          }
+        }}
+        onSubmitEditing={() => {
+          if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+            handleSelect(suggestions[selectedIndex]);
+          } else {
+            commitAddress(query);
+            setShowSuggestions(false);
+          }
+        }}
         onBlur={() => {
           blurTimeoutRef.current = setTimeout(() => {
             if (query !== lastSavedAddressRef.current) {
@@ -119,7 +145,7 @@ export function LocationAutocomplete({ value, onChange, placeholder }: LocationA
         spellCheck={false}
       />
       {showSuggestions && (loading || suggestions.length > 0) && (
-        <View style={styles.suggestionsContainer}>
+        <View style={[styles.suggestionsContainer, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
           {loading && (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="small" color={colors.primary} />
@@ -129,12 +155,16 @@ export function LocationAutocomplete({ value, onChange, placeholder }: LocationA
             data={suggestions}
             keyExtractor={(item) => item.place_id}
             keyboardShouldPersistTaps="always"
-            renderItem={({ item }) => (
+            renderItem={({ item, index }) => (
               <Pressable
-                style={({ pressed }) => [styles.suggestionItem, pressed && styles.suggestionItemPressed]}
+                style={({ pressed }) => [
+                  styles.suggestionItem,
+                  { borderBottomColor: colors.borderLight },
+                  (pressed || index === selectedIndex) && { backgroundColor: colors.surfaceSecondary }
+                ]}
                 onPress={() => handleSelect(item)}
               >
-                <Text style={styles.suggestionText} numberOfLines={2}>
+                <Text style={[styles.suggestionText, { color: colors.text }]} numberOfLines={2}>
                   {item.display_name}
                 </Text>
               </Pressable>
@@ -152,19 +182,14 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   textInput: {
-    backgroundColor: colors.surfaceSecondary,
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     fontSize: 15,
-    color: colors.text,
     borderWidth: 1,
-    borderColor: colors.borderLight,
   },
   suggestionsContainer: {
-    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.borderLight,
     borderBottomLeftRadius: borderRadius.md,
     borderBottomRightRadius: borderRadius.md,
     borderTopWidth: 0,
@@ -179,13 +204,8 @@ const styles = StyleSheet.create({
   suggestionItem: {
     padding: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderLight,
-  },
-  suggestionItemPressed: {
-    backgroundColor: colors.surfaceSecondary,
   },
   suggestionText: {
     ...typography.bodyMedium,
-    color: colors.text,
   },
 });

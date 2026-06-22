@@ -31,8 +31,8 @@ export function FieldSettingRow({
 }: FieldSettingRowProps) {
   const { colors } = useTheme();
 
-  const isSortableType = ['score', 'dollar', 'sqft', 'number', 'boolean', 'label', 'address'].includes(setting.type);
-  const isFilterableType = ['score', 'dollar', 'sqft', 'number', 'boolean', 'tag', 'label', 'address'].includes(setting.type);
+  const isSortableType = ['score', 'dollar', 'sqft', 'number', 'boolean', 'label', 'address', 'beds_baths'].includes(setting.type);
+  const isFilterableType = ['score', 'dollar', 'sqft', 'number', 'boolean', 'tag', 'label', 'address', 'beds_baths'].includes(setting.type);
 
   // For backward compatibility, if undefined, we assume default true if the type supports it
   const isSortable = setting.isSortable !== false;

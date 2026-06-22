@@ -9,7 +9,8 @@ export type FieldType =
   | 'address'
   | 'link'
   | 'pictures'
-  | 'sqft';
+  | 'sqft'
+  | 'beds_baths';
 
 export interface FieldSetting {
   id: string;
@@ -51,6 +52,7 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   'text': 'Multi-line Text',
   'link': 'Link',
   'pictures': 'Pictures',
+  'beds_baths': 'Beds / Baths',
 };
 
 export function getDefaultValue(type: FieldType): unknown {
@@ -72,6 +74,8 @@ export function getDefaultValue(type: FieldType): unknown {
       return null;
     case 'pictures':
       return [];
+    case 'beds_baths':
+      return { beds: null, baths: null };
     default:
       return '';
   }

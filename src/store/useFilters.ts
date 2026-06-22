@@ -6,6 +6,10 @@ export interface FieldFilter {
   bool?: boolean | null; // null means 'Any'
   tags?: string[];
   labels?: string[];
+  bedsMin?: number;
+  bedsMax?: number;
+  bathsMin?: number;
+  bathsMax?: number;
 }
 
 export type ActiveFilters = Record<string, FieldFilter>;
