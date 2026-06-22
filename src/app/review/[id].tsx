@@ -16,6 +16,7 @@ import {
   StyleSheet,
   Text,
   View,
+  TextInput,
 } from 'react-native';
 
 export default function ReviewDetailScreen() {
@@ -65,6 +66,14 @@ export default function ReviewDetailScreen() {
     }
   }, [isNew, id, updateReview]);
 
+  const handleExtraChange = useCallback((extra: { lat?: number | undefined; lng?: number | undefined }) => {
+    if (isNew) {
+      setLocalExtra((prev) => ({ ...prev, ...extra }));
+    } else {
+      updateReview(id!, {}, extra);
+    }
+  }, [isNew, id, updateReview]);
+
   const handleSaveCreate = async () => {
     const addressSetting = fieldSettings.find((f) => f.isCore);
     if (addressSetting) {
@@ -74,11 +83,11 @@ export default function ReviewDetailScreen() {
         else Alert.alert('Address Required', 'Please enter a valid address.');
         return;
       }
-      if (localExtra.lat === undefined || localExtra.lng === undefined) {
+      if (localExtra.lat === undefined || localExtra.lng === undefined || isNaN(localExtra.lat) || isNaN(localExtra.lng)) {
         if (Platform.OS === 'web') {
-          window.alert('Please select an address from the dropdown suggestions.');
+          window.alert('Please pick an address or enter valid GPS coordinates manually.');
         } else {
-          Alert.alert('Select Address', 'Please pick an address from the dropdown suggestions.');
+          Alert.alert('GPS Required', 'Please pick an address or enter valid GPS coordinates manually.');
         }
         return;
       }
@@ -170,22 +179,50 @@ export default function ReviewDetailScreen() {
             )}
 
             <View style={[styles.card, { backgroundColor: colors.surface }]}>
-              {activeLat !== undefined && activeLng !== undefined && (
+              {addressValue ? (
                 <View style={[styles.coordsRow, { backgroundColor: colors.surfaceSecondary, borderColor: colors.borderLight }]}>
-                  <Text style={[styles.coordsText, { color: colors.textSecondary }]}>
-                    📍 {activeLat.toFixed(5)}, {activeLng.toFixed(5)}
-                  </Text>
-                  <Pressable
-                    style={[styles.mapJumpBtn, { backgroundColor: colors.primaryLight }]}
-                    onPress={() => {
-                      const url = `https://maps.google.com/?q=${activeLat},${activeLng}`;
-                      import('react-native').then(({ Linking }) => Linking.openURL(url));
-                    }}
-                  >
-                    <Text style={[styles.mapJumpText, { color: colors.primary }]}>Open Map</Text>
-                  </Pressable>
+                  <Text style={[styles.coordsIcon, { color: colors.textSecondary }]}>📍</Text>
+                  <View style={styles.coordInputWrapper}>
+                    <Text style={[styles.coordLabel, { color: colors.textTertiary }]}>Lat</Text>
+                    <TextInput
+                      style={[styles.coordInput, { color: colors.text, borderColor: colors.borderLight, backgroundColor: colors.surface }]}
+                      keyboardType="numeric"
+                      value={activeLat !== undefined ? String(activeLat) : ''}
+                      onChangeText={(val: string) => {
+                        const num = parseFloat(val);
+                        handleExtraChange({ lat: isNaN(num) ? undefined : num });
+                      }}
+                      placeholder="Latitude"
+                      placeholderTextColor={colors.textTertiary}
+                    />
+                  </View>
+                  <View style={styles.coordInputWrapper}>
+                    <Text style={[styles.coordLabel, { color: colors.textTertiary }]}>Lng</Text>
+                    <TextInput
+                      style={[styles.coordInput, { color: colors.text, borderColor: colors.borderLight, backgroundColor: colors.surface }]}
+                      keyboardType="numeric"
+                      value={activeLng !== undefined ? String(activeLng) : ''}
+                      onChangeText={(val: string) => {
+                        const num = parseFloat(val);
+                        handleExtraChange({ lng: isNaN(num) ? undefined : num });
+                      }}
+                      placeholder="Longitude"
+                      placeholderTextColor={colors.textTertiary}
+                    />
+                  </View>
+                  {activeLat !== undefined && activeLng !== undefined && !isNaN(activeLat) && !isNaN(activeLng) && (
+                    <Pressable
+                      style={[styles.mapJumpBtn, { backgroundColor: colors.primaryLight }]}
+                      onPress={() => {
+                        const url = `https://maps.google.com/?q=${activeLat},${activeLng}`;
+                        import('react-native').then(({ Linking }) => Linking.openURL(url));
+                      }}
+                    >
+                      <Text style={[styles.mapJumpText, { color: colors.primary }]}>Open Map</Text>
+                    </Pressable>
+                  )}
                 </View>
-              )}
+              ) : null}
 
               {sortedSettings.map((setting, index) => (
                 <View key={setting.id} style={{ zIndex: 1000 - index }}>
@@ -273,15 +310,32 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     gap: spacing.sm,
   },
-  coordsText: {
-    fontSize: 13,
-    fontWeight: '500',
+  coordsIcon: {
+    fontSize: 16,
+    marginRight: 4,
+  },
+  coordInputWrapper: {
     flex: 1,
+    flexDirection: 'column',
+    gap: 2,
+  },
+  coordLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  coordInput: {
+    height: 36,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    paddingHorizontal: spacing.sm,
+    fontSize: 13,
   },
   mapJumpBtn: {
-    paddingVertical: 5,
+    paddingVertical: 8,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.md,
+    alignSelf: 'flex-end',
   },
   mapJumpText: {
     fontWeight: '600',

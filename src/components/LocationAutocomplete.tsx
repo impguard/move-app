@@ -85,10 +85,14 @@ export function LocationAutocomplete({ value, onChange, placeholder }: LocationA
         onChangeText={(text) => {
           setQuery(text);
           setShowSuggestions(true);
-          // Do NOT call onChange here - wait for a selection from the dropdown
         }}
         onFocus={() => setShowSuggestions(true)}
-        onBlur={() => setTimeout(() => setShowSuggestions(false), 300)}
+        onBlur={() => {
+          if (query !== value) {
+            onChange(query, undefined, undefined);
+          }
+          setTimeout(() => setShowSuggestions(false), 300);
+        }}
         placeholder={placeholder || 'Search address...'}
         placeholderTextColor={colors.textTertiary}
         autoComplete="off"
