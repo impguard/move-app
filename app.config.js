@@ -1,4 +1,5 @@
 const { execSync } = require('child_process');
+const packageJson = require('./package.json');
 
 let gitHash = 'unknown';
 try {
@@ -11,7 +12,7 @@ module.exports = {
   "expo": {
     "name": "move-app",
     "slug": "move-app",
-    "version": "0.0.0",
+    "version": packageJson.version,
     "orientation": "portrait",
     "icon": "./assets/images/icon-transparent.png",
     "scheme": "moveapp",
@@ -36,6 +37,7 @@ module.exports = {
     },
     "extra": {
       "router": {},
+      "version": packageJson.version,
       "gitHash": gitHash,
       "eas": {
         "projectId": "e87861b1-f9f4-473f-b0fb-a78eb0fe1dfd"
