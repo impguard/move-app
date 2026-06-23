@@ -1,0 +1,24 @@
+{
+  "short_name": "Move",
+  "name": "Move App",
+  "description": "Property hunting and review tracking app.",
+  "icons": [
+    {
+      "src": "/move-app/icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/move-app/icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/move-app/",
+  "background_color": "#121212",
+  "display": "standalone",
+  "scope": "/move-app/",
+  "theme_color": "#121212"
+}

@@ -7,40 +7,19 @@
     "icon": "./assets/images/icon-transparent.png",
     "scheme": "moveapp",
     "userInterfaceStyle": "automatic",
-    "ios": {
-      "icon": "./assets/images/app-icon-ios.png",
-      "bundleIdentifier": "com.impzter.moveapp",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#ffffff",
-        "foregroundImage": "./assets/images/app-icon-android.png"
-      },
-      "predictiveBackGestureEnabled": false,
-      "package": "com.impzter.moveapp",
-      "softwareKeyboardLayoutMode": "pan"
-    },
+
     "web": {
       "output": "static",
-      "favicon": "./assets/images/app-icon-web.png"
+      "favicon": "./assets/images/app-icon-web.png",
+      "name": "Move App",
+      "shortName": "Move",
+      "display": "standalone",
+      "themeColor": "#121212",
+      "backgroundColor": "#121212"
     },
     "plugins": [
       "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "backgroundColor": "#ffffff",
-          "image": "./assets/images/splash-icon.png",
-          "dark": {
-            "backgroundColor": "#121212",
-            "image": "./assets/images/splash-icon.png"
-          },
-          "imageWidth": 76
-        }
-      ],
+
       "expo-sharing"
     ],
     "experiments": {

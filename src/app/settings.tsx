@@ -581,6 +581,7 @@ const styles = StyleSheet.create({
   },
   dataButtons: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.md,
   },
   dataBtn: {

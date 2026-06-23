@@ -42,48 +42,42 @@ export function FieldSettingRow({
 
   return (
     <View style={[styles.row, { backgroundColor: colors.surface, borderBottomColor: colors.borderLight }]}>
-      <View style={styles.reorderButtons}>
-        <Pressable
-          onPress={onMoveUp}
-          disabled={isFirst}
-          style={[styles.arrowBtn, isFirst && styles.arrowBtnDisabled]}
-          hitSlop={12}
-        >
-          <Ionicons name="chevron-up-circle" size={28} color={isFirst ? colors.textTertiary : colors.primary} />
-        </Pressable>
-        <Pressable
-          onPress={onMoveDown}
-          disabled={isLast}
-          style={[styles.arrowBtn, isLast && styles.arrowBtnDisabled]}
-          hitSlop={12}
-        >
-          <Ionicons name="chevron-down-circle" size={28} color={isLast ? colors.textTertiary : colors.primary} />
-        </Pressable>
-      </View>
-
-      <View style={styles.info}>
-        <View style={styles.nameRow}>
-          <Text style={[styles.nameText, { color: colors.text }]}>{setting.key}</Text>
-          <Pressable onPress={onEdit} hitSlop={8} style={styles.editBtn}>
-            <FontAwesome name="pencil" size={16} color={colors.textTertiary} />
+      <View style={styles.mainGroup}>
+        <View style={styles.reorderButtons}>
+          <Pressable
+            onPress={onMoveUp}
+            disabled={isFirst}
+            style={[styles.arrowBtn, isFirst && styles.arrowBtnDisabled]}
+            hitSlop={12}
+          >
+            <Ionicons name="chevron-up-circle" size={28} color={isFirst ? colors.textTertiary : colors.primary} />
+          </Pressable>
+          <Pressable
+            onPress={onMoveDown}
+            disabled={isLast}
+            style={[styles.arrowBtn, isLast && styles.arrowBtnDisabled]}
+            hitSlop={12}
+          >
+            <Ionicons name="chevron-down-circle" size={28} color={isLast ? colors.textTertiary : colors.primary} />
           </Pressable>
         </View>
-        <View style={[styles.typeBadge, { backgroundColor: colors.primaryLight }]}>
-          <Text style={[styles.typeText, { color: colors.primary }]}>{FIELD_TYPE_LABELS[setting.type] || String(setting.type)}</Text>
+
+        <View style={styles.info}>
+          <View style={styles.nameRow}>
+            <Text style={[styles.nameText, { color: colors.text }]}>{setting.key}</Text>
+          </View>
+          <View style={[styles.typeBadge, { backgroundColor: colors.primaryLight }]}>
+            <Text style={[styles.typeText, { color: colors.primary }]}>{FIELD_TYPE_LABELS[setting.type] || String(setting.type)}</Text>
+          </View>
         </View>
       </View>
 
-      {!setting.isCore ? (
-        <Pressable onPress={onDelete} style={styles.deleteBtn} hitSlop={8}>
-          <Text style={[styles.deleteText, { color: colors.danger }]}>✕</Text>
-        </Pressable>
-      ) : (
-        <View style={[styles.coreBadge, { backgroundColor: colors.surfaceSecondary }]}>
-          <Text style={[styles.coreText, { color: colors.textTertiary }]}>Required</Text>
-        </View>
-      )}
-
       <View style={styles.toggles}>
+        <Pressable onPress={onEdit} style={styles.iconBtn} hitSlop={8}>
+          <FontAwesome name="pencil" size={16} color={colors.primary} />
+          <Text style={[styles.iconText, { color: colors.primary }]}>Edit</Text>
+        </Pressable>
+
         <Pressable onPress={isFilterableType ? onToggleFilterable : undefined} style={[styles.iconBtn, !isFilterableType && { opacity: 0 }]} hitSlop={8} disabled={!isFilterableType}>
           <Ionicons name="filter" size={16} color={isFilterable ? colors.primary : colors.textTertiary} style={{ opacity: isFilterable ? 1 : 0.5 }} />
           <Text style={[styles.iconText, { color: isFilterable ? colors.primary : colors.textTertiary }]}>Filter</Text>
@@ -104,6 +98,18 @@ export function FieldSettingRow({
             {setting.isVisibleMap ? 'Pin' : 'Hidden'}
           </Text>
         </Pressable>
+
+        {!setting.isCore ? (
+          <Pressable onPress={onDelete} style={styles.iconBtn} hitSlop={8}>
+            <Ionicons name="trash-outline" size={16} color={colors.danger} />
+            <Text style={[styles.iconText, { color: colors.danger }]}>Delete</Text>
+          </Pressable>
+        ) : (
+          <View style={[styles.iconBtn, { opacity: 0.5 }]}>
+            <Ionicons name="lock-closed" size={16} color={colors.textTertiary} />
+            <Text style={[styles.iconText, { color: colors.textTertiary }]}>Req</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -113,9 +119,18 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
+    gap: spacing.md,
+  },
+  mainGroup: {
+    flexShrink: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 180,
   },
   reorderButtons: {
     marginRight: spacing.md,
@@ -134,14 +149,13 @@ const styles = StyleSheet.create({
   nameRow: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.sm,
   },
   nameText: {
     ...typography.body,
     fontWeight: '600',
-  },
-  editBtn: {
+    flexShrink: 1,
   },
   typeBadge: {
     alignSelf: 'flex-start',
@@ -153,28 +167,10 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '500',
   },
-  deleteBtn: {
-    padding: spacing.sm,
-    marginRight: spacing.sm,
-  },
-  deleteText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  coreBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-    marginRight: spacing.sm,
-  },
-  coreText: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
   toggles: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   iconBtn: {
     alignItems: 'center',

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, Text, Pressable, TextInput, StyleSheet, KeyboardAvoidingView, Platform, Switch } from 'react-native';
+import { View, ScrollView, Text, Pressable, TextInput, StyleSheet, KeyboardAvoidingView, Platform, Switch, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -16,6 +16,9 @@ export default function FiltersScreen() {
   const { reviews } = useReviews(fieldSettings);
   const { filters, updateFilters, clearFilters, hideTaken, setHideTaken } = useFilters();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isNarrow = width < 768;
+  const isFullScreen = Platform.OS !== 'web' || isNarrow;
 
   const [localFilters, setLocalFilters] = useState<ActiveFilters>(filters);
   const [localHideTaken, setLocalHideTaken] = useState(hideTaken);
@@ -151,7 +154,7 @@ export default function FiltersScreen() {
           animation: Platform.OS === 'web' ? 'fade' : 'default',
         }}
       />
-      <View style={[styles.backdropContainer, Platform.OS !== 'web' && { backgroundColor: colors.background, justifyContent: 'flex-start', paddingTop: insets.top }]}>
+      <View style={[styles.backdropContainer, isFullScreen && { backgroundColor: colors.background, justifyContent: 'flex-start', paddingTop: insets.top }]}>
         {Platform.OS === 'web' && (
           <Pressable style={StyleSheet.absoluteFill} onPress={() => router.back()} />
         )}
@@ -159,7 +162,7 @@ export default function FiltersScreen() {
           style={[
             styles.sheetContent,
             { backgroundColor: colors.background },
-            Platform.OS !== 'web' && styles.sheetContentNative
+            isFullScreen && styles.sheetContentNative
           ]}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
@@ -606,6 +609,7 @@ const styles = StyleSheet.create({
   },
   rangeInput: {
     flex: 1,
+    minWidth: 0,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     fontSize: 16,

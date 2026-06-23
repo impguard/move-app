@@ -1,16 +1,16 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { View, FlatList, Pressable, Text, StyleSheet, ScrollView, Platform, Image, useWindowDimensions, TextInput } from 'react-native';
-import { useRouter, useFocusEffect, Stack, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { EmptyState } from '@/components/EmptyState';
 import { ReviewCard } from '@/components/ReviewCard';
 import { ReviewsMap } from '@/components/ReviewsMap';
-import { EmptyState } from '@/components/EmptyState';
-import { useReviews } from '@/store/useReviews';
 import { useFieldSettings } from '@/store/useFieldSettings';
 import { useFilters } from '@/store/useFilters';
+import { useReviews } from '@/store/useReviews';
 import { useSort } from '@/store/useSort';
-import { useTheme, spacing, borderRadius, shadows, typography } from '@/theme';
+import { borderRadius, shadows, spacing, typography, useTheme } from '@/theme';
 import { getHashColor } from '@/utils/colors';
+import { Ionicons } from '@expo/vector-icons';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
+import { FlatList, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 
 export default function ReviewListScreen() {
   const router = useRouter();
@@ -35,7 +35,7 @@ export default function ReviewListScreen() {
       let initQ = searchQuery;
       let initHT = hideTaken;
       if (params.filters) {
-        try { initF = JSON.parse(decodeURIComponent(params.filters)); } catch(e) {}
+        try { initF = JSON.parse(decodeURIComponent(params.filters)); } catch (e) { }
       }
       if (params.search !== undefined) {
         initQ = params.search;
@@ -44,10 +44,10 @@ export default function ReviewListScreen() {
         initHT = params.hideTaken === '1';
       }
       _initFromUrl(initF, initQ, initHT);
-      
+
       if (params.view === 'map') setViewMode('map');
       if (params.labels === '0') setShowMapLabels(false);
-      
+
       setIsUrlInitialized(true);
       if (initQ || params.searchOpen === '1') setIsSearchActive(true);
     }
@@ -57,9 +57,9 @@ export default function ReviewListScreen() {
     if (isUrlInitialized) {
       const fStr = Object.keys(filters).length > 0 ? JSON.stringify(filters) : '';
       const sStr = sort ? JSON.stringify(sort) : '';
-      
+
       const newParams: Record<string, string | undefined> = {};
-      
+
       // Setting to undefined in Expo Router effectively deletes the param
       newParams.filters = fStr || undefined;
       newParams.search = searchQuery || undefined;
@@ -95,7 +95,7 @@ export default function ReviewListScreen() {
           const numVal = Number(val);
           if (isNaN(numVal) || numVal > filter.max) return false;
         }
-        
+
         if (filter.bedsMin !== undefined || filter.bedsMax !== undefined || filter.bathsMin !== undefined || filter.bathsMax !== undefined) {
           const bb = (val || {}) as any;
           if (filter.bedsMin !== undefined && ((bb.beds ?? 0) < filter.bedsMin)) return false;
@@ -138,13 +138,13 @@ export default function ReviewListScreen() {
       filtered.sort((a, b) => {
         const valA = a.fields[sort.fieldId];
         const valB = b.fields[sort.fieldId];
-        
+
         if (valA === valB) return 0;
         if (valA === undefined || valA === null) return 1;
         if (valB === undefined || valB === null) return -1;
 
         const sortDir = sort.order === 'asc' ? 1 : -1;
-        
+
         if (typeof valA === 'object' && valA !== null && 'beds' in valA) {
           const bbA = valA as any;
           const bbB = (valB || {}) as any;
@@ -152,11 +152,11 @@ export default function ReviewListScreen() {
           const scoreB = (bbB.beds || 0) * 100 + (bbB.baths || 0);
           return (scoreA - scoreB) * sortDir;
         }
-        
+
         if (typeof valA === 'number' && typeof valB === 'number') {
           return (valA - valB) * sortDir;
         }
-        
+
         return String(valA).localeCompare(String(valB)) * sortDir;
       });
     }
@@ -195,7 +195,7 @@ export default function ReviewListScreen() {
         else label += `≤ ${f.max}`;
         chips.push({ fieldId, type: 'range', label });
       }
-      
+
       if (f.bedsMin !== undefined || f.bedsMax !== undefined || f.bathsMin !== undefined || f.bathsMax !== undefined) {
         let label = setting.key + ': ';
         const parts = [];
@@ -216,7 +216,7 @@ export default function ReviewListScreen() {
         label += parts.join(', ');
         chips.push({ fieldId, type: 'beds_baths', label });
       }
-      
+
       if (f.bool !== undefined) {
         let boolLabel = 'Unknown';
         if (f.bool === true) boolLabel = 'Yes';
@@ -314,7 +314,7 @@ export default function ReviewListScreen() {
       <Image source={require('../../assets/images/icon-transparent.png')} style={{ width: 28, height: 28 }} />
       <Text style={[styles.appTitle, { color: colors.text }]}>Move</Text>
     </View>
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   ), [colors]);
 
   return (
@@ -494,7 +494,7 @@ export default function ReviewListScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={[styles.filterBarScroll, { paddingLeft: spacing.lg, paddingBottom: spacing.sm }]}
-            style={{ flexGrow: 0, flexShrink: 0 }}
+            style={{ flexGrow: 0, flexShrink: 0, marginTop: spacing.sm }}
           >
             {activeFilterChips.map((chip, i) => (
               <Pressable
@@ -622,9 +622,9 @@ const styles = StyleSheet.create({
   filterBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
+    marginVertical: spacing.md,
     paddingLeft: spacing.lg,
+    zIndex: 10,
   },
   filterBarDivider: {
     width: 1,
@@ -639,18 +639,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     paddingRight: spacing.lg,
+    zIndex: 10,
   },
   // Segment control (inside filter bar)
   segmentedControl: {
     flexDirection: 'row',
     borderRadius: borderRadius.md,
     padding: 3,
+    height: 32,
   },
   segmentBtn: {
-    paddingVertical: spacing.xs + 2,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: borderRadius.sm,
+    height: '100%',
   },
   segmentBtnActive: {},
   segmentText: {
@@ -726,7 +729,6 @@ const styles = StyleSheet.create({
   },
   // List
   listContent: {
-    paddingTop: spacing.md,
     paddingBottom: 100,
   },
   listContentWeb: {

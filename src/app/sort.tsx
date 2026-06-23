@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform, useWindowDimensions } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,9 @@ export default function SortScreen() {
   const { fieldSettings } = useFieldSettings();
   const { sort, updateSort, clearSort } = useSort();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isNarrow = width < 768;
+  const isFullScreen = Platform.OS !== 'web' || isNarrow;
 
   const [localSort, setLocalSort] = useState<SortState | null>(sort);
 
@@ -41,14 +44,14 @@ export default function SortScreen() {
           animation: Platform.OS === 'web' ? 'fade' : 'default',
         }}
       />
-      <View style={[styles.backdropContainer, Platform.OS !== 'web' && { backgroundColor: colors.background, justifyContent: 'flex-start', paddingTop: insets.top }]}>
+      <View style={[styles.backdropContainer, isFullScreen && { backgroundColor: colors.background, justifyContent: 'flex-start', paddingTop: insets.top }]}>
         {Platform.OS === 'web' && (
           <Pressable style={StyleSheet.absoluteFill} onPress={() => router.back()} />
         )}
         <View style={[
           styles.sheetContent,
           { backgroundColor: colors.background },
-          Platform.OS !== 'web' && styles.sheetContentNative
+          isFullScreen && styles.sheetContentNative
         ]}>
           <View style={[styles.dragHandle, { backgroundColor: colors.borderLight }]} />
           <View style={styles.headerRow}>
