@@ -10,6 +10,7 @@ import { borderRadius, colors, shadows, spacing, typography, useTheme } from '@/
 import { FieldSetting, FieldType, Review } from '@/types';
 import { createDefaultFieldSettings } from '@/utils/defaults';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
@@ -307,6 +308,8 @@ export default function SettingsScreen() {
               Configure the fields that appear on every review. Adding or removing a field affects all reviews.
             </Text>
 
+
+
             <View style={[styles.fieldList, { backgroundColor: colors.surface }]}>
               {sortedSettings.map((setting, index) => (
                 <FieldSettingRow
@@ -595,5 +598,13 @@ const styles = StyleSheet.create({
     ...typography.bodyMedium,
     color: colors.text,
     fontWeight: '500',
+  },
+  versionTop: {
+    alignItems: 'flex-start',
+    marginBottom: spacing.xl,
+    marginTop: -spacing.md,
+  },
+  versionText: {
+    fontSize: 12,
   },
 });

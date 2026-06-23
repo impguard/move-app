@@ -8,6 +8,7 @@ import { useSort } from '@/store/useSort';
 import { borderRadius, shadows, spacing, typography, useTheme } from '@/theme';
 import { getHashColor } from '@/utils/colors';
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import { FlatList, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
@@ -313,6 +314,9 @@ export default function ReviewListScreen() {
     <View style={styles.headerTitleRow}>
       <Image source={require('../../assets/images/icon-transparent.png')} style={{ width: 28, height: 28 }} />
       <Text style={[styles.appTitle, { color: colors.text }]}>Move</Text>
+      <Text style={[styles.versionText, { color: colors.textTertiary }]}>
+        v{Constants.expoConfig?.version || '0.0.0'}
+      </Text>
     </View>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ), [colors]);
@@ -550,16 +554,20 @@ export default function ReviewListScreen() {
             showsVerticalScrollIndicator={false}
           />
         ) : (
-          <ReviewsMap
-            reviews={filteredReviews}
-            showLabels={showMapLabels}
-            onReviewPress={(id) => router.push(`/review/${id}`)}
-            fieldSettings={fieldSettings}
-            getAddress={(r) => {
-              const addressSetting = fieldSettings.find((f) => f.isCore);
-              return addressSetting ? String(r.fields[addressSetting.id] || 'Unknown') : 'Unknown';
-            }}
-          />
+          <View style={[{ flex: 1 }, !isNarrow && { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }]}>
+            <View style={[{ flex: 1 }, !isNarrow && { borderRadius: borderRadius.lg, overflow: 'hidden' }]}>
+              <ReviewsMap
+                reviews={filteredReviews}
+                showLabels={showMapLabels}
+                onReviewPress={(id) => router.push(`/review/${id}`)}
+                fieldSettings={fieldSettings}
+                getAddress={(r) => {
+                  const addressSetting = fieldSettings.find((f) => f.isCore);
+                  return addressSetting ? String(r.fields[addressSetting.id] || 'Unknown') : 'Unknown';
+                }}
+              />
+            </View>
+          </View>
         )}
 
         <Pressable
@@ -604,6 +612,11 @@ const styles = StyleSheet.create({
   },
   appTitle: {
     ...typography.heading,
+  },
+  versionText: {
+    fontSize: 10,
+    marginTop: 6,
+    marginLeft: spacing.xs,
   },
   headerFilterChip: {
     flexDirection: 'row',
