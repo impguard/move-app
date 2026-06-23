@@ -359,6 +359,41 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [] }: Fie
           />
         );
 
+      case 'strict_boolean':
+        return (
+          <View style={styles.triStateRow}>
+            {(['yes', 'no'] as const).map((opt) => {
+              const isSelected = 
+                (opt === 'yes' && value === true) || 
+                (opt === 'no' && value === false);
+              
+              const activeBg = opt === 'yes' ? colors.success : colors.danger;
+              
+              return (
+                <Pressable
+                  key={opt}
+                  onPress={() => {
+                    onChange(opt === 'yes');
+                  }}
+                  style={[
+                    styles.triStateBtn,
+                    { borderColor: colors.borderLight },
+                    isSelected && { backgroundColor: activeBg, borderColor: activeBg }
+                  ]}
+                >
+                  <Text style={[
+                    styles.triStateText,
+                    { color: colors.textSecondary },
+                    isSelected && { color: '#fff', fontWeight: '600' }
+                  ]}>
+                    {opt === 'yes' ? 'Yes' : 'No'}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        );
+
       case 'boolean':
         return (
           <View style={styles.triStateRow}>

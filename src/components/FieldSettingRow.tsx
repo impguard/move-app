@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome } from '@expo/vector-icons';
 import { FieldSetting, FIELD_TYPE_LABELS } from '@/types';
 import { useTheme, spacing, borderRadius, typography } from '@/theme';
 
@@ -11,7 +11,7 @@ interface FieldSettingRowProps {
   onMoveUp: () => void;
   onMoveDown: () => void;
   onDelete: () => void;
-  onUpdateName: (newName: string) => void;
+  onEdit: () => void;
   onToggleListVisibility: () => void;
   onToggleMapVisibility: () => void;
   onToggleSortable: () => void;
@@ -25,30 +25,16 @@ export function FieldSettingRow({
   onMoveUp,
   onMoveDown,
   onDelete,
-  onUpdateName,
+  onEdit,
   onToggleListVisibility,
   onToggleMapVisibility,
   onToggleSortable,
   onToggleFilterable,
 }: FieldSettingRowProps) {
   const { colors } = useTheme();
-  const [name, setName] = useState(setting.key);
 
-  useEffect(() => {
-    setName(setting.key);
-  }, [setting.key]);
-
-  useEffect(() => {
-    if (name === setting.key) return;
-    const timer = setTimeout(() => {
-      onUpdateName(name);
-    }, 1000);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [name, setting.key]);
-
-  const isSortableType = ['score', 'dollar', 'sqft', 'number', 'boolean', 'label', 'beds_baths'].includes(setting.type);
-  const isFilterableType = ['score', 'dollar', 'sqft', 'number', 'boolean', 'tag', 'label', 'beds_baths'].includes(setting.type);
+  const isSortableType = ['score', 'dollar', 'sqft', 'number', 'boolean', 'strict_boolean', 'label', 'beds_baths'].includes(setting.type);
+  const isFilterableType = ['score', 'dollar', 'sqft', 'number', 'boolean', 'strict_boolean', 'tag', 'label', 'beds_baths'].includes(setting.type);
 
   // For backward compatibility, if undefined, we assume default true if the type supports it
   const isSortable = setting.isSortable !== false;
@@ -76,13 +62,12 @@ export function FieldSettingRow({
       </View>
 
       <View style={styles.info}>
-        <TextInput 
-          style={[styles.fieldNameInput, { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight }]}
-          value={name}
-          onChangeText={setName}
-          placeholder="Field Name"
-          placeholderTextColor={colors.textTertiary}
-        />
+        <View style={styles.nameRow}>
+          <Text style={[styles.nameText, { color: colors.text }]}>{setting.key}</Text>
+          <Pressable onPress={onEdit} hitSlop={8} style={styles.editBtn}>
+            <FontAwesome name="pencil" size={16} color={colors.textTertiary} />
+          </Pressable>
+        </View>
         <View style={[styles.typeBadge, { backgroundColor: colors.primaryLight }]}>
           <Text style={[styles.typeText, { color: colors.primary }]}>{FIELD_TYPE_LABELS[setting.type] || String(setting.type)}</Text>
         </View>
@@ -99,18 +84,14 @@ export function FieldSettingRow({
       )}
 
       <View style={styles.toggles}>
-        {isFilterableType && (
-          <Pressable onPress={onToggleFilterable} style={styles.iconBtn} hitSlop={8}>
-            <Ionicons name="filter" size={16} color={isFilterable ? colors.primary : colors.textTertiary} style={{ opacity: isFilterable ? 1 : 0.5 }} />
-            <Text style={[styles.iconText, { color: isFilterable ? colors.primary : colors.textTertiary }]}>Filter</Text>
-          </Pressable>
-        )}
-        {isSortableType && (
-          <Pressable onPress={onToggleSortable} style={styles.iconBtn} hitSlop={8}>
-            <Ionicons name="swap-vertical" size={16} color={isSortable ? colors.primary : colors.textTertiary} style={{ opacity: isSortable ? 1 : 0.5 }} />
-            <Text style={[styles.iconText, { color: isSortable ? colors.primary : colors.textTertiary }]}>Sort</Text>
-          </Pressable>
-        )}
+        <Pressable onPress={isFilterableType ? onToggleFilterable : undefined} style={[styles.iconBtn, !isFilterableType && { opacity: 0 }]} hitSlop={8} disabled={!isFilterableType}>
+          <Ionicons name="filter" size={16} color={isFilterable ? colors.primary : colors.textTertiary} style={{ opacity: isFilterable ? 1 : 0.5 }} />
+          <Text style={[styles.iconText, { color: isFilterable ? colors.primary : colors.textTertiary }]}>Filter</Text>
+        </Pressable>
+        <Pressable onPress={isSortableType ? onToggleSortable : undefined} style={[styles.iconBtn, !isSortableType && { opacity: 0 }]} hitSlop={8} disabled={!isSortableType}>
+          <Ionicons name="swap-vertical" size={16} color={isSortable ? colors.primary : colors.textTertiary} style={{ opacity: isSortable ? 1 : 0.5 }} />
+          <Text style={[styles.iconText, { color: isSortable ? colors.primary : colors.textTertiary }]}>Sort</Text>
+        </Pressable>
         <Pressable onPress={onToggleListVisibility} style={styles.iconBtn} hitSlop={8}>
           <Ionicons name="card-outline" size={16} color={setting.isVisibleList ? colors.primary : colors.textTertiary} style={{ opacity: setting.isVisibleList ? 1 : 0.5 }} />
           <Text style={[styles.iconText, { color: setting.isVisibleList ? colors.textSecondary : colors.textTertiary }]}>
@@ -151,22 +132,16 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   nameRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.sm,
   },
-  fieldName: {
-    ...typography.bodyMedium,
+  nameText: {
+    ...typography.body,
+    fontWeight: '600',
   },
-  fieldNameInput: {
-    ...typography.bodyMedium,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderWidth: 1,
-    marginBottom: spacing.xs,
-    alignSelf: 'flex-start',
-    minWidth: 140,
-    maxWidth: 180,
+  editBtn: {
   },
   typeBadge: {
     alignSelf: 'flex-start',

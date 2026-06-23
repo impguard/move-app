@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, spacing, borderRadius, typography } from '@/theme';
 import { useFieldSettings } from '@/store/useFieldSettings';
@@ -11,10 +12,11 @@ export default function SortScreen() {
   const { colors } = useTheme();
   const { fieldSettings } = useFieldSettings();
   const { sort, updateSort, clearSort } = useSort();
+  const insets = useSafeAreaInsets();
 
   const [localSort, setLocalSort] = useState<SortState | null>(sort);
 
-  const sortableSettings = fieldSettings.filter((s) => s.isSortable !== false && ['score', 'dollar', 'sqft', 'number', 'boolean', 'label'].includes(s.type));
+  const sortableSettings = fieldSettings.filter((s) => s.isSortable !== false && ['score', 'dollar', 'sqft', 'number', 'boolean', 'strict_boolean', 'label'].includes(s.type));
 
   const handleApply = () => {
     if (localSort) updateSort(localSort);
@@ -39,7 +41,7 @@ export default function SortScreen() {
           animation: Platform.OS === 'web' ? 'fade' : 'default',
         }}
       />
-      <View style={[styles.backdropContainer, Platform.OS !== 'web' && { backgroundColor: colors.background, justifyContent: 'flex-start' }]}>
+      <View style={[styles.backdropContainer, Platform.OS !== 'web' && { backgroundColor: colors.background, justifyContent: 'flex-start', paddingTop: insets.top }]}>
         {Platform.OS === 'web' && (
           <Pressable style={StyleSheet.absoluteFill} onPress={() => router.back()} />
         )}
@@ -191,7 +193,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
   },
   rowText: {

@@ -172,6 +172,11 @@ export default function ReviewDetailScreen() {
           title: shortTitle,
           headerStyle: { backgroundColor: colors.surface },
           headerTitleStyle: { color: colors.text, fontWeight: '600' },
+          headerLeft: () => (
+            <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/')} style={{ marginLeft: Platform.OS === 'web' ? 16 : 0, marginRight: 16 }}>
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </Pressable>
+          ),
         }}
       />
       <KeyboardAvoidingView

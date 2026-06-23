@@ -1,33 +1,29 @@
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL, uploadString } from 'firebase/storage';
 import { storage } from './firebase';
 import { v4 as uuidv4 } from 'uuid';
 import { Platform } from 'react-native';
 
 export async function uploadImageToStorage(uri: string): Promise<string> {
-  const isWeb = Platform.OS === 'web';
-  let blob: Blob = await new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.onload = function () {
-      resolve(xhr.response);
-    };
-    xhr.onerror = function (e) {
-      console.warn('XHR error reading blob', e);
-      reject(new TypeError('Failed to read file as blob'));
-    };
-    xhr.responseType = 'blob';
-    xhr.open('GET', uri, true);
-    xhr.send(null);
-  });
-
-  // Create a unique file name
   const extension = uri.split('.').pop()?.toLowerCase() || 'jpg';
-  // Check if extension is too long (e.g., if there's query params)
   const safeExt = extension.length > 4 ? 'jpg' : extension;
   const fileName = `${uuidv4()}.${safeExt}`;
-  
   const fileRef = ref(storage, `images/${fileName}`);
-  
-  // Upload the blob
+
+  if (uri.startsWith('data:')) {
+    const snapshot = await uploadString(fileRef, uri, 'data_url');
+    return await getDownloadURL(snapshot.ref);
+  }
+
+  let blob: Blob;
+  try {
+    const response = await fetch(uri);
+    blob = await response.blob();
+  } catch (e) {
+    console.warn('Fetch error reading blob', e);
+    throw new TypeError('Failed to read file as blob');
+  }
+
+  // Upload the blob if it's not a data URL
   const snapshot = await uploadBytesResumable(fileRef, blob);
   
   // Get the public download URL

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, ScrollView, Text, Pressable, TextInput, StyleSheet, KeyboardAvoidingView, Platform, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { useFieldSettings } from '@/store/useFieldSettings';
 import { useFilters, ActiveFilters, FieldFilter } from '@/store/useFilters';
@@ -14,6 +15,7 @@ export default function FiltersScreen() {
   const { fieldSettings } = useFieldSettings();
   const { reviews } = useReviews(fieldSettings);
   const { filters, updateFilters, clearFilters, hideTaken, setHideTaken } = useFilters();
+  const insets = useSafeAreaInsets();
 
   const [localFilters, setLocalFilters] = useState<ActiveFilters>(filters);
   const [localHideTaken, setLocalHideTaken] = useState(hideTaken);
@@ -137,7 +139,7 @@ export default function FiltersScreen() {
   };
 
   const filterableSettings = fieldSettings.filter((s) =>
-    s.isFilterable !== false && ['score', 'dollar', 'sqft', 'number', 'boolean', 'tag', 'label', 'beds_baths'].includes(s.type)
+    s.isFilterable !== false && ['score', 'dollar', 'sqft', 'number', 'boolean', 'strict_boolean', 'tag', 'label', 'beds_baths'].includes(s.type)
   );
 
   return (
@@ -149,7 +151,7 @@ export default function FiltersScreen() {
           animation: Platform.OS === 'web' ? 'fade' : 'default',
         }}
       />
-      <View style={[styles.backdropContainer, Platform.OS !== 'web' && { backgroundColor: colors.background, justifyContent: 'flex-start' }]}>
+      <View style={[styles.backdropContainer, Platform.OS !== 'web' && { backgroundColor: colors.background, justifyContent: 'flex-start', paddingTop: insets.top }]}>
         {Platform.OS === 'web' && (
           <Pressable style={StyleSheet.absoluteFill} onPress={() => router.back()} />
         )}
@@ -242,11 +244,11 @@ export default function FiltersScreen() {
                             { backgroundColor: colors.surfaceSecondary, borderColor: colors.borderLight },
                             isSelected && { backgroundColor: colors.primaryLight, borderColor: colors.primary },
                           ]}
-                          onPress={() => updateLocalFilter(setting.id, { min: p.min, max: p.max })}
+                          onPress={() => isSelected ? updateLocalFilter(setting.id, { min: undefined, max: undefined }) : updateLocalFilter(setting.id, { min: p.min, max: p.max })}
                         >
                           <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                            <Text numberOfLines={1} style={[styles.presetText, { fontWeight: '600', opacity: 0 }]}>{p.label}</Text>
-                            <Text numberOfLines={1} style={[styles.presetText, { position: 'absolute', color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
+                            <Text style={[styles.presetText, { fontWeight: '600', opacity: 0, height: 0 }]}>{p.label}</Text>
+                            <Text style={[styles.presetText, { color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
                               {p.label}
                             </Text>
                           </View>
@@ -302,11 +304,11 @@ export default function FiltersScreen() {
                             { backgroundColor: colors.surfaceSecondary, borderColor: colors.borderLight },
                             isSelected && { backgroundColor: colors.primaryLight, borderColor: colors.primary },
                           ]}
-                          onPress={() => updateLocalFilter(setting.id, { bedsMin: p.min, bedsMax: p.max })}
+                          onPress={() => isSelected ? updateLocalFilter(setting.id, { bedsMin: undefined, bedsMax: undefined }) : updateLocalFilter(setting.id, { bedsMin: p.min, bedsMax: p.max })}
                         >
                           <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                            <Text numberOfLines={1} style={[styles.presetText, { fontWeight: '600', opacity: 0 }]}>{p.label}</Text>
-                            <Text numberOfLines={1} style={[styles.presetText, { position: 'absolute', color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
+                            <Text style={[styles.presetText, { fontWeight: '600', opacity: 0, height: 0 }]}>{p.label}</Text>
+                            <Text style={[styles.presetText, { color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
                               {p.label}
                             </Text>
                           </View>
@@ -354,11 +356,11 @@ export default function FiltersScreen() {
                             { backgroundColor: colors.surfaceSecondary, borderColor: colors.borderLight },
                             isSelected && { backgroundColor: colors.primaryLight, borderColor: colors.primary },
                           ]}
-                          onPress={() => updateLocalFilter(setting.id, { bathsMin: p.min, bathsMax: p.max })}
+                          onPress={() => isSelected ? updateLocalFilter(setting.id, { bathsMin: undefined, bathsMax: undefined }) : updateLocalFilter(setting.id, { bathsMin: p.min, bathsMax: p.max })}
                         >
                           <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                            <Text numberOfLines={1} style={[styles.presetText, { fontWeight: '600', opacity: 0 }]}>{p.label}</Text>
-                            <Text numberOfLines={1} style={[styles.presetText, { position: 'absolute', color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
+                            <Text style={[styles.presetText, { fontWeight: '600', opacity: 0, height: 0 }]}>{p.label}</Text>
+                            <Text style={[styles.presetText, { color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
                               {p.label}
                             </Text>
                           </View>
@@ -371,12 +373,16 @@ export default function FiltersScreen() {
             );
           }
 
-          if (setting.type === 'boolean') {
+          if (setting.type === 'boolean' || setting.type === 'strict_boolean') {
+            const options = setting.type === 'strict_boolean'
+              ? (['Any', 'Yes', 'No'] as const)
+              : (['Any', 'Yes', 'No', 'Unknown'] as const);
+
             return (
               <View key={setting.id} style={[styles.filterSection, { backgroundColor: colors.surface }]}>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>{setting.key}</Text>
                 <View style={styles.boolRow}>
-                  {(['Any', 'Yes', 'No', 'Unknown'] as const).map((opt) => {
+                  {options.map((opt) => {
                     let isSelected = false;
                     if (opt === 'Any') isSelected = currentFilter.bool === undefined;
                     if (opt === 'Yes') isSelected = currentFilter.bool === true;
@@ -399,8 +405,8 @@ export default function FiltersScreen() {
                         }}
                       >
                         <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                          <Text style={[styles.boolText, { fontWeight: '600', opacity: 0 }]}>{opt}</Text>
-                          <Text style={[styles.boolText, { position: 'absolute', color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
+                          <Text style={[styles.boolText, { fontWeight: '600', opacity: 0, height: 0 }]}>{opt}</Text>
+                          <Text style={[styles.boolText, { color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
                             {opt}
                           </Text>
                         </View>
@@ -451,8 +457,8 @@ export default function FiltersScreen() {
                         }}
                       >
                         <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                          <Text style={[styles.tagText, { fontWeight: '500', opacity: 0 }]}>{tag}</Text>
-                          <Text style={[styles.tagText, { position: 'absolute', color: hc.text }, isSelected && { color: '#fff', fontWeight: '500' }]}>
+                          <Text style={[styles.tagText, { fontWeight: '500', opacity: 0, height: 0 }]}>{tag}</Text>
+                          <Text style={[styles.tagText, { color: hc.text }, isSelected && { color: '#fff', fontWeight: '500' }]}>
                             {tag}
                           </Text>
                         </View>

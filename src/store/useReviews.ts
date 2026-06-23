@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Review, FieldSetting, getDefaultValue } from '@/types';
+import { Review, FieldSetting, FieldType, getDefaultValue } from '@/types';
+import { coerceFieldValue } from '@/utils/typeConversion';
 import { createReviewRemote, updateReviewFields, removeReview, addReviewUpdateListener } from './firestoreSync';
 
 // ─── Module-level global state (shared across all hook instances) ─────────────
@@ -50,6 +51,25 @@ export function useReviews(fieldSettings: FieldSetting[]) {
 
     return () => { globalListeners.delete(listener); };
   }, []);
+
+  const coercedReviews = useMemo(() => {
+    if (!fieldSettings || fieldSettings.length === 0) return reviews;
+    return reviews.map((r) => {
+      let changed = false;
+      const newFields = { ...r.fields };
+      for (const fs of fieldSettings) {
+        if (fs.id in newFields) {
+          const current = newFields[fs.id];
+          const coerced = coerceFieldValue(current, fs.type);
+          if (current !== coerced) {
+            newFields[fs.id] = coerced;
+            changed = true;
+          }
+        }
+      }
+      return changed ? { ...r, fields: newFields } : r;
+    });
+  }, [reviews, fieldSettings]);
 
   // ─── Public operations ──────────────────────────────────────────────────────
 
@@ -156,7 +176,7 @@ export function useReviews(fieldSettings: FieldSetting[]) {
   }, [updateReview]);
 
   return {
-    reviews,
+    reviews: coercedReviews,
     loading,
     createReview,
     updateReview,

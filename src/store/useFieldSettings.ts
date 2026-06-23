@@ -93,7 +93,7 @@ export function useFieldSettings() {
       order: globalSettings.length,
       isVisibleList: true,
       isVisibleMap: false,
-      isSortable: true,
+      isSortable: false,
       isFilterable: true,
       ...(type === 'score' ? { scoreMin: config?.scoreMin ?? 1, scoreMax: config?.scoreMax ?? 5 } : {}),
     };

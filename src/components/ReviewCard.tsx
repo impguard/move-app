@@ -125,7 +125,7 @@ export function ReviewCard({ review, fieldSettings, onPress, style }: ReviewCard
 
             let displayValue = String(value);
             if (isUnknown) {
-              if (setting.type === 'boolean') {
+              if (setting.type === 'boolean' || setting.type === 'strict_boolean') {
                 displayValue = '?';
               } else {
                 displayValue = '-';
@@ -134,7 +134,7 @@ export function ReviewCard({ review, fieldSettings, onPress, style }: ReviewCard
               displayValue = formatDollar(value);
             } else if (setting.type === 'sqft' && typeof value === 'number') {
               displayValue = `${value} sq ft`;
-            } else if (setting.type === 'boolean') {
+            } else if (setting.type === 'boolean' || setting.type === 'strict_boolean') {
               displayValue = value ? '✓' : '✗';
             } else if (setting.type === 'pictures' && Array.isArray(value)) {
               displayValue = `${value.length} photos`;

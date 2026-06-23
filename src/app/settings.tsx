@@ -1,4 +1,5 @@
 import { AddFieldModal } from '@/components/AddFieldModal';
+import { EditFieldModal } from '@/components/EditFieldModal';
 import { FieldSettingRow } from '@/components/FieldSettingRow';
 import { wipeSyncData } from '@/store/firestoreSync';
 import { FIELD_SETTINGS_KEY, REVIEWS_KEY, setItem } from '@/store/storage';
@@ -42,6 +43,7 @@ export default function SettingsScreen() {
   const { syncKey, changeSyncKey } = useSyncKey();
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
+  const [editSetting, setEditSetting] = useState<FieldSetting | null>(null);
   const [showKeyInput, setShowKeyInput] = useState(false);
   const [keyInputValue, setKeyInputValue] = useState('');
   const [keyCopied, setKeyCopied] = useState(false);
@@ -60,6 +62,14 @@ export default function SettingsScreen() {
     const newField = await addField(key, type, config);
     // Sync new field to all existing reviews
     await syncFieldsToReviews([...fieldSettings, newField]);
+  };
+
+  const handleEditField = async (id: string, newName: string, newType: FieldType, config?: { scoreMin?: number; scoreMax?: number }) => {
+    const oldSetting = fieldSettings.find(f => f.id === id);
+    if (!oldSetting) return;
+    
+    // Type conversions are now handled lazily on-read in useReviews
+    await updateField(id, { key: newName, type: newType, ...(config || {}) });
   };
 
   const handleDeleteField = (id: string) => {
@@ -307,7 +317,7 @@ export default function SettingsScreen() {
                   onMoveUp={() => reorderField(setting.id, 'up')}
                   onMoveDown={() => reorderField(setting.id, 'down')}
                   onDelete={() => handleDeleteField(setting.id)}
-                  onUpdateName={(newName) => updateField(setting.id, { key: newName })}
+                  onEdit={() => setEditSetting(setting)}
                   onToggleListVisibility={() => updateField(setting.id, { isVisibleList: !setting.isVisibleList })}
                   onToggleMapVisibility={() => updateField(setting.id, { isVisibleMap: !setting.isVisibleMap })}
                   onToggleSortable={() => updateField(setting.id, { isSortable: setting.isSortable === false ? true : false })}
@@ -406,6 +416,12 @@ export default function SettingsScreen() {
           visible={modalVisible}
           onClose={() => setModalVisible(false)}
           onAdd={handleAddField}
+        />
+        <EditFieldModal
+          visible={!!editSetting}
+          setting={editSetting}
+          onClose={() => setEditSetting(null)}
+          onSave={handleEditField}
         />
       </KeyboardAvoidingView>
     </>

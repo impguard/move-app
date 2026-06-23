@@ -10,6 +10,7 @@ export type FieldType =
   | 'link'
   | 'pictures'
   | 'sqft'
+  | 'strict_boolean'
   | 'beds_baths';
 
 export interface FieldSetting {
@@ -50,7 +51,8 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   'dollar': 'Dollar Amount',
   'sqft': 'Square Footage',
   'score': 'Score',
-  'boolean': 'Yes / No / Unknown',
+  'boolean': 'Yes / No / Unknown (Toggle)',
+  'strict_boolean': 'Yes / No (Toggle)',
   'text': 'Multi-line Text',
   'link': 'Link',
   'pictures': 'Pictures',
@@ -74,6 +76,8 @@ export function getDefaultValue(type: FieldType): unknown {
       return 1;
     case 'boolean':
       return null;
+    case 'strict_boolean':
+      return false;
     case 'pictures':
       return [];
     case 'beds_baths':
