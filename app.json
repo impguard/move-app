@@ -44,6 +44,7 @@
       "expo-sharing"
     ],
     "experiments": {
+      "baseUrl": "/move-app",
       "typedRoutes": true,
       "reactCompiler": true
     },
