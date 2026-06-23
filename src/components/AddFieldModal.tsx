@@ -20,6 +20,7 @@ interface AddFieldModalProps {
 }
 
 const FIELD_TYPES: FieldType[] = [
+  'address',
   'label',
   'tag',
   'number',
@@ -76,11 +77,14 @@ export function AddFieldModal({ visible, onClose, onAdd }: AddFieldModalProps) {
             onChangeText={setName}
             placeholder="e.g. Garage, Pet Friendly..."
             placeholderTextColor={colors.textTertiary}
-            autoFocus
           />
 
           <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Field Type</Text>
-          <ScrollView style={styles.typeList} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            style={styles.typeList} 
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             {FIELD_TYPES.map((type) => (
               <Pressable
                 key={type}

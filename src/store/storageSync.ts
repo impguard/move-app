@@ -5,16 +5,19 @@ import { Platform } from 'react-native';
 
 export async function uploadImageToStorage(uri: string): Promise<string> {
   const isWeb = Platform.OS === 'web';
-  let blob: Blob;
-
-  if (isWeb && uri.startsWith('data:')) {
-    const response = await fetch(uri);
-    blob = await response.blob();
-  } else {
-    // React Native's fetch works for local file:// URIs to convert them to Blobs
-    const response = await fetch(uri);
-    blob = await response.blob();
-  }
+  let blob: Blob = await new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.onload = function () {
+      resolve(xhr.response);
+    };
+    xhr.onerror = function (e) {
+      console.warn('XHR error reading blob', e);
+      reject(new TypeError('Failed to read file as blob'));
+    };
+    xhr.responseType = 'blob';
+    xhr.open('GET', uri, true);
+    xhr.send(null);
+  });
 
   // Create a unique file name
   const extension = uri.split('.').pop()?.toLowerCase() || 'jpg';

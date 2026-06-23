@@ -14,7 +14,7 @@ export default function SortScreen() {
 
   const [localSort, setLocalSort] = useState<SortState | null>(sort);
 
-  const sortableSettings = fieldSettings.filter((s) => s.isSortable !== false && ['score', 'dollar', 'sqft', 'number', 'boolean', 'label', 'address'].includes(s.type));
+  const sortableSettings = fieldSettings.filter((s) => s.isSortable !== false && ['score', 'dollar', 'sqft', 'number', 'boolean', 'label'].includes(s.type));
 
   const handleApply = () => {
     if (localSort) updateSort(localSort);
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.lg,
-    paddingBottom: 90, // Extra padding for FAB
+    paddingBottom: 140, // Extra padding for FAB
     maxWidth: 600,
     width: '100%',
     alignSelf: 'center',

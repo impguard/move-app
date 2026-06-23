@@ -26,6 +26,7 @@ export interface FieldSetting {
   isVisibleMap?: boolean;
   isSortable?: boolean;
   isFilterable?: boolean;
+  schemaVersion?: number;
 }
 
 export interface Review {
@@ -38,6 +39,7 @@ export interface Review {
   lat?: number;
   lng?: number;
   status?: 'draft' | 'saved' | 'taken';
+  schemaVersion?: number;
 }
 
 export const FIELD_TYPE_LABELS: Record<FieldType, string> = {

@@ -67,7 +67,7 @@ export function ReviewCard({ review, fieldSettings, onPress, style }: ReviewCard
         <View style={styles.detailsRow}>
           {visibleSettings.map((setting) => {
             const value = review.fields[setting.id];
-            if (value === undefined || value === null || value === '') return null;
+            const isUnknown = value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
 
             if (setting.type === 'score') {
               return (
@@ -78,8 +78,7 @@ export function ReviewCard({ review, fieldSettings, onPress, style }: ReviewCard
               );
             }
 
-            if (setting.type === 'tag' && Array.isArray(value)) {
-              if (value.length === 0) return null;
+            if (!isUnknown && setting.type === 'tag' && Array.isArray(value)) {
               return (
                 <View key={setting.id} style={styles.chipRow}>
                   <Text style={[styles.detailLabel, styles.detailKey, { color: colors.text }]}>{setting.key}:</Text>
@@ -95,7 +94,7 @@ export function ReviewCard({ review, fieldSettings, onPress, style }: ReviewCard
               );
             }
 
-            if ((setting.type === 'label' || setting.type === 'address') && typeof value === 'string' && value.trim() !== '') {
+            if (!isUnknown && (setting.type === 'label' || setting.type === 'address') && typeof value === 'string' && value.trim() !== '') {
               const c = getHashColor(value);
               return (
                 <View key={setting.id} style={styles.chipRow}>
@@ -107,7 +106,7 @@ export function ReviewCard({ review, fieldSettings, onPress, style }: ReviewCard
               );
             }
 
-            if (setting.type === 'link' && typeof value === 'string' && value.trim() !== '') {
+            if (!isUnknown && setting.type === 'link' && typeof value === 'string' && value.trim() !== '') {
               return (
                 <Text key={setting.id} style={[styles.detailLabel, { color: colors.textSecondary }]} numberOfLines={1}>
                   <Text style={[styles.detailKey, { color: colors.text }]}>{setting.key}: </Text>
@@ -125,22 +124,26 @@ export function ReviewCard({ review, fieldSettings, onPress, style }: ReviewCard
             }
 
             let displayValue = String(value);
-            if (setting.type === 'dollar' && typeof value === 'number') {
+            if (isUnknown) {
+              if (setting.type === 'boolean') {
+                displayValue = '?';
+              } else {
+                displayValue = '-';
+              }
+            } else if (setting.type === 'dollar' && typeof value === 'number') {
               displayValue = formatDollar(value);
             } else if (setting.type === 'sqft' && typeof value === 'number') {
               displayValue = `${value} sq ft`;
             } else if (setting.type === 'boolean') {
               displayValue = value ? '✓' : '✗';
             } else if (setting.type === 'pictures' && Array.isArray(value)) {
-              if (value.length === 0) return null;
               displayValue = `${value.length} photos`;
             } else if (setting.type === 'beds_baths') {
               const bb = value as { beds?: number; baths?: number };
               const parts = [];
               if (bb?.beds != null) parts.push(`${bb.beds} Bed`);
               if (bb?.baths != null) parts.push(`${bb.baths} Bath`);
-              if (parts.length === 0) return null;
-              displayValue = parts.join(' / ');
+              displayValue = parts.length === 0 ? '-' : parts.join(' / ');
             }
 
             return (

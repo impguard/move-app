@@ -11,9 +11,12 @@ const globalListeners = new Set<(reviews: Review[]) => void>();
 // One-time Firestore listener registration
 let firestoreListenerRegistered = false;
 
+import { migrateReviews } from './migrations';
+
 function notifyAll(reviews: Review[]) {
-  globalReviews = reviews;
-  globalListeners.forEach((l) => l(reviews));
+  const migrated = migrateReviews(reviews);
+  globalReviews = migrated;
+  globalListeners.forEach((l) => l(migrated));
 }
 
 function ensureFirestoreListener() {

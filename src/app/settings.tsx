@@ -307,6 +307,7 @@ export default function SettingsScreen() {
                   onMoveUp={() => reorderField(setting.id, 'up')}
                   onMoveDown={() => reorderField(setting.id, 'down')}
                   onDelete={() => handleDeleteField(setting.id)}
+                  onUpdateName={(newName) => updateField(setting.id, { key: newName })}
                   onToggleListVisibility={() => updateField(setting.id, { isVisibleList: !setting.isVisibleList })}
                   onToggleMapVisibility={() => updateField(setting.id, { isVisibleMap: !setting.isVisibleMap })}
                   onToggleSortable={() => updateField(setting.id, { isSortable: setting.isSortable === false ? true : false })}

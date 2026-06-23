@@ -137,7 +137,7 @@ export default function FiltersScreen() {
   };
 
   const filterableSettings = fieldSettings.filter((s) =>
-    s.isFilterable !== false && ['score', 'dollar', 'sqft', 'number', 'boolean', 'tag', 'label', 'address', 'beds_baths'].includes(s.type)
+    s.isFilterable !== false && ['score', 'dollar', 'sqft', 'number', 'boolean', 'tag', 'label', 'beds_baths'].includes(s.type)
   );
 
   return (

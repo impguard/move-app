@@ -8,6 +8,8 @@ import { pushSettingsWithDeletions, addSettingsUpdateListener } from './firestor
 // ... (skipping to hook body)
 // Wait, I need to use StartLine and EndLine appropriately. Let's do a precise replace for the imports and saveSettings.
 
+import { migrateFieldSettings } from './migrations';
+
 // ─── Module-level global state ────────────────────────────────────────────────
 let globalSettings: FieldSetting[] = [];
 let globalLoading = true;
@@ -16,17 +18,7 @@ const globalListeners = new Set<(settings: FieldSetting[]) => void>();
 let firestoreListenerRegistered = false;
 
 function notifyAll(settings: FieldSetting[]) {
-  const migrated = settings.map((s) => {
-    let isVisibleList = s.isVisibleList;
-    let isVisibleMap = s.isVisibleMap;
-    if (isVisibleList === undefined) {
-      isVisibleList = s.isVisible ?? true;
-    }
-    if (isVisibleMap === undefined) {
-      isVisibleMap = s.isVisible ?? true;
-    }
-    return { ...s, isVisibleList, isVisibleMap };
-  });
+  const migrated = migrateFieldSettings(settings);
 
   globalSettings = migrated;
   globalListeners.forEach((l) => l(migrated));
