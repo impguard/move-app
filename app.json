@@ -24,7 +24,7 @@
       "softwareKeyboardLayoutMode": "pan"
     },
     "web": {
-      "output": "single",
+      "output": "static",
       "favicon": "./assets/images/app-icon-web.png"
     },
     "plugins": [
