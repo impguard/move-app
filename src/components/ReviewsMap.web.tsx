@@ -1,32 +1,45 @@
 import { useTheme } from '@/theme';
 import { FieldSetting, Review } from '@/types';
 import { formatShortAddress } from '@/utils/format';
-import L from 'leaflet';
-import React from 'react';
-import { MapContainer, Marker, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-// Fix missing marker icons in leaflet web
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-const activeIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [0, -42],
-  tooltipAnchor: [0.5, -42],
-  shadowSize: [41, 41]
-});
+const isBrowser = typeof window !== 'undefined';
+let L: any;
+let reactLeaflet: any;
 
-const takenIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [0, -42],
-  tooltipAnchor: [0.5, -42],
-  shadowSize: [41, 41]
-});
+if (isBrowser) {
+  L = require('leaflet');
+  reactLeaflet = require('react-leaflet');
+  // Fix missing marker icons in leaflet web
+  delete (L.Icon.Default.prototype as any)._getIconUrl;
+}
+
+const getActiveIcon = () => {
+  if (!L) return null;
+  return new L.Icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [0, -42],
+    tooltipAnchor: [0.5, -42],
+    shadowSize: [41, 41]
+  });
+};
+
+const getTakenIcon = () => {
+  if (!L) return null;
+  return new L.Icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [0, -42],
+    tooltipAnchor: [0.5, -42],
+    shadowSize: [41, 41]
+  });
+};
 
 interface ReviewsMapProps {
   reviews: Review[];
@@ -59,9 +72,11 @@ function formatFieldValue(value: unknown, type: FieldSetting['type']): string {
 import { useFocusEffect } from 'expo-router';
 
 function FitBounds({ markers }: { markers: Review[] }) {
+  if (!reactLeaflet) return null;
+  const { useMap } = reactLeaflet;
   const map = useMap();
   React.useEffect(() => {
-    if (markers.length > 0) {
+    if (markers.length > 0 && L) {
       const bounds = L.latLngBounds(markers.map(m => [m.lat!, m.lng!]));
       map.fitBounds(bounds, { padding: [50, 50] });
     }
@@ -102,6 +117,16 @@ export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings, 
       ));
   };
 
+  if (!isBrowser || !reactLeaflet) {
+    return (
+      <View style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}>
+        <Text style={{ color: colors.textSecondary }}>Loading map...</Text>
+      </View>
+    );
+  }
+
+  const { MapContainer, Marker, Popup, TileLayer, Tooltip } = reactLeaflet;
+
   return (
     <View style={styles.container}>
       <MapContainer
@@ -119,7 +144,7 @@ export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings, 
             <Marker
               key={review.id}
               position={[review.lat!, review.lng!]}
-              icon={(review as any).status === 'taken' ? takenIcon : activeIcon}
+              icon={(review as any).status === 'taken' ? getTakenIcon() : getActiveIcon()}
             >
               {showLabels && renderLabel(review, mapVisibleSettings).length > 0 && (
                 <Tooltip

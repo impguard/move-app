@@ -29,44 +29,46 @@ export const shadows = {
   lg: { boxShadow: '0px 15px 40px -15px rgba(78, 110, 88, 0.2)', elevation: 8 } as any,
 };
 
+const getFont = (name: string) => Platform.OS === 'web' ? 'Outfit, sans-serif' : name;
+
 export const typography = {
   title: {
-    fontFamily: 'Outfit_700Bold',
+    fontFamily: getFont('Outfit_700Bold'),
     fontSize: 28,
     fontWeight: '700' as const,
     letterSpacing: -0.5,
   },
   heading: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: getFont('Outfit_600SemiBold'),
     fontSize: 20,
     fontWeight: '600' as const,
     letterSpacing: -0.3,
   },
   body: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: getFont('Outfit_400Regular'),
     fontSize: 15,
     fontWeight: '400' as const,
     lineHeight: 22,
   },
   bodyMedium: {
-    fontFamily: 'Outfit_500Medium',
+    fontFamily: getFont('Outfit_500Medium'),
     fontSize: 15,
     fontWeight: '500' as const,
   },
   caption: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: getFont('Outfit_400Regular'),
     fontSize: 13,
     fontWeight: '400' as const,
   },
   label: {
-    fontFamily: 'Outfit_600SemiBold',
+    fontFamily: getFont('Outfit_600SemiBold'),
     fontSize: 13,
     fontWeight: '600' as const,
     textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
   },
   small: {
-    fontFamily: 'Outfit_400Regular',
+    fontFamily: getFont('Outfit_400Regular'),
     fontSize: 12,
     fontWeight: '400' as const,
   },
