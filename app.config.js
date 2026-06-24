@@ -24,7 +24,7 @@ module.exports = {
       "shortName": "Move",
       "display": "standalone",
       "themeColor": "#121212",
-      "backgroundColor": "#121212"
+      "backgroundColor": "#ffffff"
     },
     "plugins": [
       "expo-router",
