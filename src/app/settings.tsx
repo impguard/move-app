@@ -412,6 +412,20 @@ export default function SettingsScreen() {
                 </Pressable>
               </View>
             </View>
+
+            {/* ── App Updates ────────────────────────────────────────── */}
+            {Platform.OS === 'web' && (
+              <View style={[styles.dataSection, { borderTopColor: colors.borderLight }]}>
+                <Text style={[styles.dataTitle, { color: colors.text }]}>App Updates</Text>
+                <Text style={[styles.dataDesc, { color: colors.textSecondary }]}>If you've installed this app to your home screen and it hasn't automatically picked up a new update, you can force it here.</Text>
+
+                <Pressable style={[styles.dataBtn, { backgroundColor: colors.primaryLight, alignSelf: 'flex-start', paddingHorizontal: spacing.xl }]} onPress={() => {
+                  window.location.href = window.location.pathname + '?v=' + new Date().getTime();
+                }}>
+                  <Text style={[styles.dataBtnText, { color: colors.primary }]}>Check for Updates</Text>
+                </Pressable>
+              </View>
+            )}
           </ScrollView>
         )}
 
