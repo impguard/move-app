@@ -1,0 +1,10 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- House -->
+  <path d="M 256 64 L 64 224 L 112 224 L 112 416 L 192 416 M 320 416 L 400 416 L 400 224 L 448 224 L 256 64" fill="none" stroke="#DDA052" stroke-width="28" stroke-linejoin="round" stroke-linecap="round" />
+  
+  <!-- Map Pin -->
+  <path d="M 256 160 C 190 160 160 210 160 260 C 160 320 256 464 256 464 C 256 464 352 320 352 260 C 352 210 322 160 256 160 Z" fill="none" stroke="#DDA052" stroke-width="28" stroke-linejoin="round" stroke-linecap="round" />
+  
+  <!-- Inner Circle -->
+  <circle cx="256" cy="260" r="40" fill="none" stroke="#DDA052" stroke-width="28" />
+</svg>

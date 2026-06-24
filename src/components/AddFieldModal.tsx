@@ -32,6 +32,7 @@ const FIELD_TYPES: FieldType[] = [
   'link',
   'pictures',
   'beds_baths',
+  'strict_boolean',
 ];
 
 export function AddFieldModal({ visible, onClose, onAdd }: AddFieldModalProps) {

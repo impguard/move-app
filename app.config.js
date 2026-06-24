@@ -19,7 +19,7 @@ module.exports = {
     "userInterfaceStyle": "automatic",
     "web": {
       "output": "static",
-      "favicon": "./assets/images/app-icon-web.png",
+      "favicon": "./assets/images/icon-transparent.png",
       "name": "Move App",
       "shortName": "Move",
       "display": "standalone",

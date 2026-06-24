@@ -18,9 +18,6 @@ export function PictureField({ value, onChange }: PictureFieldProps) {
     try {
       const uploadPromises = assets.map(async (asset) => {
         let uriToUpload = asset.uri;
-        if (asset.base64) {
-          uriToUpload = `data:image/jpeg;base64,${asset.base64}`;
-        }
         return await uploadImageToStorage(uriToUpload);
       });
       const uploadedUris = await Promise.all(uploadPromises);
@@ -49,8 +46,7 @@ export function PictureField({ value, onChange }: PictureFieldProps) {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
-      quality: 0.7,
-      base64: true, // Always request base64 to avoid native filesystem Blob conversion issues
+      quality: 0.4,
     });
 
     if (!result.canceled && result.assets) {
@@ -67,8 +63,7 @@ export function PictureField({ value, onChange }: PictureFieldProps) {
 
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
-      quality: 0.7,
-      base64: Platform.OS === 'web',
+      quality: 0.4,
     });
 
     if (!result.canceled && result.assets) {
