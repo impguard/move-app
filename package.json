@@ -58,7 +58,7 @@
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
     "web": "expo start --web",
-    "build:web": "expo export -p web",
+    "build:web": "EXPO_PUBLIC_GIT_HASH=$(git rev-parse --short HEAD) expo export -p web",
     "deploy:web": "npm run build:web && cp dist/index.html dist/404.html && echo '!node_modules/' > dist/.gitignore && gh-pages -d dist --dotfiles --nojekyll",
     "lint": "expo lint"
   },

@@ -319,7 +319,7 @@ export default function ReviewListScreen() {
       <Image source={require('../../assets/images/icon-transparent.png')} style={{ width: 28, height: 28 }} />
       <Text style={[styles.appTitle, { color: colors.text }]}>Move</Text>
       <Text style={[styles.versionText, { color: colors.textTertiary }]}>
-        v{Constants.expoConfig?.extra?.version || '0.0.0'} ({Constants.expoConfig?.extra?.gitHash || 'dev'})
+        v{Constants.expoConfig?.extra?.version || '0.0.0'} ({process.env.EXPO_PUBLIC_GIT_HASH || Constants.expoConfig?.extra?.gitHash || 'dev'})
       </Text>
     </View>
     // eslint-disable-next-line react-hooks/exhaustive-deps
