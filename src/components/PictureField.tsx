@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { View, Text, Image, Pressable, ScrollView, StyleSheet, Alert, Platform, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme, spacing, borderRadius } from '@/theme';
-import { uploadImageToStorage } from '@/store/storageSync';
 
 interface PictureFieldProps {
   value: string[];
   onChange: (value: string[]) => void;
+  totalPicturesCount: number;
 }
 
-export function PictureField({ value, onChange }: PictureFieldProps) {
+export function PictureField({ value, onChange, totalPicturesCount }: PictureFieldProps) {
   const [isUploading, setIsUploading] = useState(false);
   const { colors } = useTheme();
 
@@ -17,30 +17,21 @@ export function PictureField({ value, onChange }: PictureFieldProps) {
     setIsUploading(true);
     try {
       const uploadPromises = assets.map(async (asset) => {
-        let uriToUpload = asset.uri;
+        let finalUri = asset.uri;
         
         // Compress and resize the image, extracting base64
-        if (Platform.OS === 'web') {
-          // On Web, ImageManipulator compresses it correctly and gets us base64 directly
-          const manipulateResult = await import('expo-image-manipulator').then(m => m.manipulateAsync(
-            asset.uri,
-            [{ resize: { width: 1024 } }],
-            { compress: 0.7, format: m.SaveFormat.JPEG, base64: true }
-          ));
-          if (manipulateResult.base64) {
-            uriToUpload = `data:image/jpeg;base64,${manipulateResult.base64}`;
-          }
-        } else {
-          // On mobile, just compress it (Firebase handles local URIs perfectly without base64 hack)
-          const manipulateResult = await import('expo-image-manipulator').then(m => m.manipulateAsync(
-            asset.uri,
-            [{ resize: { width: 1024 } }],
-            { compress: 0.7, format: m.SaveFormat.JPEG }
-          ));
-          uriToUpload = manipulateResult.uri;
+        const manipulateResult = await import('expo-image-manipulator').then(m => m.manipulateAsync(
+          asset.uri,
+          [{ resize: { width: 600 } }], // Aggressive resize
+          { compress: 0.5, format: m.SaveFormat.JPEG, base64: true }
+        ));
+        
+        if (manipulateResult.base64) {
+          finalUri = `data:image/jpeg;base64,${manipulateResult.base64}`;
         }
-
-        return await uploadImageToStorage(uriToUpload);
+        
+        // Return the raw data URI directly to be embedded in the JSON document!
+        return finalUri;
       });
       const uploadedUris = await Promise.all(uploadPromises);
       onChange([...value, ...uploadedUris]);
@@ -65,14 +56,19 @@ export function PictureField({ value, onChange }: PictureFieldProps) {
       return;
     }
 
+    const remaining = Math.max(0, 12 - totalPicturesCount);
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
+      selectionLimit: remaining,
       quality: 0.4,
     });
 
     if (!result.canceled && result.assets) {
-      await processAssets(result.assets);
+      const assetsToProcess = result.assets.slice(0, remaining);
+      if (assetsToProcess.length > 0) {
+        await processAssets(assetsToProcess);
+      }
     }
   };
 
@@ -83,17 +79,26 @@ export function PictureField({ value, onChange }: PictureFieldProps) {
       return;
     }
 
+    const remaining = Math.max(0, 12 - totalPicturesCount);
+    if (remaining <= 0) return;
+
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ['images'],
       quality: 0.4,
     });
 
     if (!result.canceled && result.assets) {
-      await processAssets(result.assets);
+      await processAssets(result.assets.slice(0, remaining));
     }
   };
 
   const pickImage = () => {
+    if (totalPicturesCount >= 12) {
+      if (Platform.OS === 'web') window.alert('You have reached the limit of 12 photos per review.');
+      else Alert.alert('Limit Reached', 'You have reached the limit of 12 photos per review.');
+      return;
+    }
+
     if (Platform.OS === 'web') {
       launchLibrary();
       return;

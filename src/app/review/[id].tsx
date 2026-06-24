@@ -165,6 +165,17 @@ export default function ReviewDetailScreen() {
     ? reviews.some(r => r.id !== (isNew ? 'new' : id) && r.fields[addressField?.id || ''] === addressValue)
     : false;
 
+  const currentFields = isNew ? localFields : review?.fields || {};
+  let totalPicturesCount = 0;
+  fieldSettings.forEach(s => {
+    if (s.type === 'pictures') {
+      const val = currentFields[s.id];
+      if (Array.isArray(val)) {
+        totalPicturesCount += val.length;
+      }
+    }
+  });
+
   return (
     <>
       <Stack.Screen
@@ -269,6 +280,7 @@ export default function ReviewDetailScreen() {
                     value={isNew ? localFields[setting.id] : review?.fields[setting.id]}
                     onChange={(value, extra) => handleFieldChange(setting.id, value, extra)}
                     allReviews={reviews}
+                    totalPicturesCount={totalPicturesCount}
                   />
                 </View>
               ))}

@@ -115,6 +115,8 @@ interface FieldRendererProps {
   onChange: (value: unknown, extra?: { lat?: number; lng?: number }) => void;
   /** All saved reviews — used to derive autocomplete suggestions for tag/label fields */
   allReviews?: Review[];
+  /** Total count of pictures across all picture fields in this review */
+  totalPicturesCount?: number;
 }
 
 /** Collect all unique values for a given field across all reviews */
@@ -134,7 +136,7 @@ function collectExistingValues(setting: FieldSetting, allReviews: Review[]): str
   return Array.from(seen).sort();
 }
 
-export function FieldRenderer({ setting, value, onChange, allReviews = [] }: FieldRendererProps) {
+export function FieldRenderer({ setting, value, onChange, allReviews = [], totalPicturesCount = 0 }: FieldRendererProps) {
   const { colors } = useTheme();
   const [tagInputText, setTagInputText] = useState('');
 
@@ -469,6 +471,7 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [] }: Fie
           <PictureField
             value={Array.isArray(value) ? (value as string[]) : []}
             onChange={onChange}
+            totalPicturesCount={totalPicturesCount}
           />
         );
 
