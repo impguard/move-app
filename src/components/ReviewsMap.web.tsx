@@ -28,7 +28,7 @@ const getActiveIcon = () => {
   });
 };
 
-const getTakenIcon = () => {
+const getHiddenIcon = () => {
   if (!L) return null;
   return new L.Icon({
     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png',
@@ -144,7 +144,7 @@ export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings, 
             <Marker
               key={review.id}
               position={[review.lat!, review.lng!]}
-              icon={(review as any).status === 'taken' ? getTakenIcon() : getActiveIcon()}
+              icon={(review as any).status === 'taken' || (review as any).status === 'hidden' ? getHiddenIcon() : getActiveIcon()}
             >
               {showLabels && renderLabel(review, mapVisibleSettings).length > 0 && (
                 <Tooltip

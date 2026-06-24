@@ -35,7 +35,7 @@ export function ReviewCard({ review, fieldSettings, onPress, style }: ReviewCard
     );
   };
 
-  const isTaken = review.status === 'taken';
+  const isHidden = review.status === 'taken' || review.status === 'hidden';
 
   return (
     <Pressable
@@ -45,18 +45,18 @@ export function ReviewCard({ review, fieldSettings, onPress, style }: ReviewCard
         { backgroundColor: colors.surface },
         Platform.OS === 'web' && styles.cardWeb,
         style,
-        isTaken && { opacity: 0.65, backgroundColor: colors.surfaceSecondary },
+        isHidden && { opacity: 0.65, backgroundColor: colors.surfaceSecondary },
         pressed && styles.cardPressed,
       ]}
     >
       <View style={styles.cardHeader}>
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', marginRight: spacing.sm }}>
-          <Text style={[styles.address, { color: colors.text, textDecorationLine: isTaken ? 'line-through' : 'none' }]} numberOfLines={1}>
+          <Text style={[styles.address, { color: colors.text, textDecorationLine: isHidden ? 'line-through' : 'none' }]} numberOfLines={1}>
             {address || 'New Property'}
           </Text>
-          {isTaken && (
-            <View style={[styles.takenBadge, { backgroundColor: colors.danger + '22' }]}>
-              <Text style={[styles.takenText, { color: colors.danger }]}>TAKEN</Text>
+          {isHidden && (
+            <View style={[styles.hiddenBadge, { backgroundColor: colors.borderLight }]}>
+              <Text style={[styles.hiddenText, { color: colors.textSecondary }]}>HIDDEN</Text>
             </View>
           )}
         </View>
@@ -187,13 +187,12 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: spacing.sm,
   },
-  takenBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+  hiddenBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 4,
-    marginLeft: 8,
   },
-  takenText: {
+  hiddenText: {
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.5,

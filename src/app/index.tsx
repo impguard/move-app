@@ -18,13 +18,13 @@ export default function ReviewListScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
   const { fieldSettings, loading: settingsLoading } = useFieldSettings();
   const { reviews, loading: reviewsLoading, createReview, reload } = useReviews(fieldSettings);
-  const { filters, searchQuery, hideTaken, updateFilters, setSearchQuery, clearFilters, _initFromUrl } = useFilters();
+  const { filters, searchQuery, hiddenFilter, updateFilters, setSearchQuery, clearFilters, _initFromUrl } = useFilters();
   const { sort, clearSort } = useSort();
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [showMapLabels, setShowMapLabels] = useState(true);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [isUrlInitialized, setIsUrlInitialized] = useState(false);
-  const params = useLocalSearchParams<{ filters?: string; search?: string; sort?: string; hideTaken?: string; view?: 'list' | 'map'; labels?: string; searchOpen?: string }>();
+  const params = useLocalSearchParams<{ filters?: string; search?: string; sort?: string; hiddenFilter?: string; hideTaken?: string; view?: 'list' | 'map'; labels?: string; searchOpen?: string }>();
   const { width } = useWindowDimensions();
   const isNarrow = width < 768;
 
@@ -34,15 +34,17 @@ export default function ReviewListScreen() {
     if (!isUrlInitialized) {
       let initF = filters;
       let initQ = searchQuery;
-      let initHT = hideTaken;
+      let initHT = hiddenFilter;
       if (params.filters) {
         try { initF = JSON.parse(decodeURIComponent(params.filters)); } catch (e) { }
       }
       if (params.search !== undefined) {
         initQ = params.search;
       }
-      if (params.hideTaken !== undefined) {
-        initHT = params.hideTaken === '1';
+      if (params.hiddenFilter !== undefined) {
+        initHT = params.hiddenFilter as any;
+      } else if (params.hideTaken !== undefined) {
+        initHT = params.hideTaken === '1' ? 'active' : 'all';
       }
       _initFromUrl(initF, initQ, initHT);
 
@@ -52,7 +54,7 @@ export default function ReviewListScreen() {
       setIsUrlInitialized(true);
       if (initQ || params.searchOpen === '1') setIsSearchActive(true);
     }
-  }, [params, isUrlInitialized, _initFromUrl, filters, searchQuery, hideTaken]);
+  }, [params, isUrlInitialized, _initFromUrl, filters, searchQuery, hiddenFilter]);
 
   React.useEffect(() => {
     if (isUrlInitialized) {
@@ -65,14 +67,14 @@ export default function ReviewListScreen() {
       newParams.filters = fStr || undefined;
       newParams.search = searchQuery || undefined;
       newParams.sort = sStr || undefined;
-      newParams.hideTaken = hideTaken ? '1' : undefined;
+      newParams.hiddenFilter = hiddenFilter !== 'active' ? hiddenFilter : undefined;
       newParams.view = viewMode === 'map' ? 'map' : undefined;
       newParams.labels = !showMapLabels ? '0' : undefined;
       newParams.searchOpen = isSearchActive && !searchQuery ? '1' : undefined;
 
       router.setParams(newParams);
     }
-  }, [filters, searchQuery, sort, hideTaken, viewMode, showMapLabels, isSearchActive, isUrlInitialized, router]);
+  }, [filters, searchQuery, sort, hiddenFilter, viewMode, showMapLabels, isSearchActive, isUrlInitialized, router]);
 
   useFocusEffect(
     useCallback(() => {
@@ -83,7 +85,9 @@ export default function ReviewListScreen() {
   const filteredReviews = useMemo(() => {
     let filtered = reviews.filter((review) => {
       if (review.status === 'draft') return false;
-      if (hideTaken && review.status === 'taken') return false;
+      const isReviewHidden = review.status === 'taken' || review.status === 'hidden';
+      if (hiddenFilter === 'active' && isReviewHidden) return false;
+      if (hiddenFilter === 'hidden' && !isReviewHidden) return false;
 
       for (const [fieldId, filter] of Object.entries(filters)) {
         const val = review.fields[fieldId];
@@ -172,7 +176,7 @@ export default function ReviewListScreen() {
     }
 
     return filtered;
-  }, [reviews, filters, sort, searchQuery, hideTaken, fieldSettings]);
+  }, [reviews, filters, sort, searchQuery, hiddenFilter, fieldSettings]);
 
   const handleCreate = () => {
     router.push('/review/new');

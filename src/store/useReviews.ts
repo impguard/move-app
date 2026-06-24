@@ -100,7 +100,7 @@ export function useReviews(fieldSettings: FieldSetting[]) {
   const updateReview = useCallback(async (
     id: string,
     fieldUpdates: Record<string, unknown>,
-    extra?: { lat?: number; lng?: number; status?: 'draft' | 'saved' | 'taken' }
+    extra?: { lat?: number; lng?: number; status?: 'draft' | 'saved' | 'taken' | 'hidden' }
   ) => {
     const r = globalReviews.find((rev) => rev.id === id);
     if (!r) return;

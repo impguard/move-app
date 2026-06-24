@@ -79,7 +79,7 @@ export function ReviewsMap({ reviews, onReviewPress, getAddress, fieldSettings, 
             anchor={{ x: 0.5, y: 0.5 }}
           >
             <View style={styles.customMarkerContainer}>
-              <View style={[styles.markerDot, review.status === 'taken' && { backgroundColor: '#999', borderColor: '#eee' }]} />
+              <View style={[styles.markerDot, (review.status === 'taken' || review.status === 'hidden') && { backgroundColor: '#999', borderColor: '#eee' }]} />
               {showLabels && mapVisibleSettings.length > 0 && (
                 <View style={styles.markerLabel}>
                   {mapVisibleSettings.map((s) => {

@@ -14,24 +14,24 @@ export default function FiltersScreen() {
   const { colors } = useTheme();
   const { fieldSettings } = useFieldSettings();
   const { reviews } = useReviews(fieldSettings);
-  const { filters, updateFilters, clearFilters, hideTaken, setHideTaken } = useFilters();
+  const { filters, updateFilters, clearFilters, hiddenFilter, setHiddenFilter } = useFilters();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isNarrow = width < 768;
   const isFullScreen = Platform.OS !== 'web' || isNarrow;
 
   const [localFilters, setLocalFilters] = useState<ActiveFilters>(filters);
-  const [localHideTaken, setLocalHideTaken] = useState(hideTaken);
+  const [localHiddenFilter, setLocalHiddenFilter] = useState(hiddenFilter);
 
   const handleApply = () => {
     updateFilters(localFilters);
-    setHideTaken(localHideTaken);
+    setHiddenFilter(localHiddenFilter);
     router.back();
   };
 
   const handleClear = () => {
     clearFilters();
-    setLocalHideTaken(false);
+    setLocalHiddenFilter('active');
     router.back();
   };
 
@@ -182,16 +182,29 @@ export default function FiltersScreen() {
             automaticallyAdjustKeyboardInsets={true}
             contentInsetAdjustmentBehavior="automatic"
           >
-            <View style={[styles.filterSection, { backgroundColor: colors.surface, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
-              <View>
-                <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 4 }]}>Property Status</Text>
-                <Text style={{ fontSize: 12, color: colors.textTertiary }}>Hide properties marked as taken</Text>
+            <View style={[styles.filterSection, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Visibility Status</Text>
+              <View style={styles.boolRow}>
+                {(['active', 'hidden', 'all'] as const).map((opt) => {
+                  const isSelected = localHiddenFilter === opt;
+                  const label = opt === 'active' ? 'Active Only' : opt === 'hidden' ? 'Hidden Only' : 'Show All';
+                  return (
+                    <Pressable
+                      key={opt}
+                      style={[
+                        styles.boolBtn,
+                        { backgroundColor: colors.surfaceSecondary, borderColor: colors.borderLight },
+                        isSelected && { backgroundColor: colors.primaryLight, borderColor: colors.primary },
+                      ]}
+                      onPress={() => setLocalHiddenFilter(opt)}
+                    >
+                      <Text style={[styles.boolText, { color: colors.textSecondary }, isSelected && { color: colors.primary, fontWeight: '600' }]}>
+                        {label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
-              <Switch 
-                value={localHideTaken} 
-                onValueChange={setLocalHideTaken} 
-                trackColor={{ true: colors.primary }}
-              />
             </View>
         {filterableSettings.length === 0 && (
           <View style={[styles.emptyCard, { backgroundColor: colors.surface }]}>

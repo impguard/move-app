@@ -39,7 +39,7 @@ export interface Review {
   hasDuplicate?: boolean;
   lat?: number;
   lng?: number;
-  status?: 'draft' | 'saved' | 'taken';
+  status?: 'draft' | 'saved' | 'taken' | 'hidden';
   schemaVersion?: number;
 }
 

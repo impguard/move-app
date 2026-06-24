@@ -18,6 +18,28 @@ export function PictureField({ value, onChange }: PictureFieldProps) {
     try {
       const uploadPromises = assets.map(async (asset) => {
         let uriToUpload = asset.uri;
+        
+        // Compress and resize the image, extracting base64
+        if (Platform.OS === 'web') {
+          // On Web, ImageManipulator compresses it correctly and gets us base64 directly
+          const manipulateResult = await import('expo-image-manipulator').then(m => m.manipulateAsync(
+            asset.uri,
+            [{ resize: { width: 1024 } }],
+            { compress: 0.7, format: m.SaveFormat.JPEG, base64: true }
+          ));
+          if (manipulateResult.base64) {
+            uriToUpload = `data:image/jpeg;base64,${manipulateResult.base64}`;
+          }
+        } else {
+          // On mobile, just compress it (Firebase handles local URIs perfectly without base64 hack)
+          const manipulateResult = await import('expo-image-manipulator').then(m => m.manipulateAsync(
+            asset.uri,
+            [{ resize: { width: 1024 } }],
+            { compress: 0.7, format: m.SaveFormat.JPEG }
+          ));
+          uriToUpload = manipulateResult.uri;
+        }
+
         return await uploadImageToStorage(uriToUpload);
       });
       const uploadedUris = await Promise.all(uploadPromises);

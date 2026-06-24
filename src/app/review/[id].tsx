@@ -291,20 +291,20 @@ export default function ReviewDetailScreen() {
 
                 <Pressable
                   onPress={() => {
-                    const newStatus = review?.status === 'taken' ? 'saved' : 'taken';
+                    const newStatus = (review?.status === 'hidden') ? 'saved' : 'hidden';
                     updateReview(id!, {}, { status: newStatus });
                   }}
                   style={({ pressed }) => [
-                    styles.takenBtn,
-                    review?.status === 'taken' && { backgroundColor: colors.warning + '22' },
+                    styles.hiddenBtn,
+                    review?.status === 'hidden' && { backgroundColor: colors.warning + '22' },
                     pressed && { opacity: 0.7 }
                   ]}
                   hitSlop={8}
                 >
                   <Ionicons 
-                    name={review?.status === 'taken' ? "ban" : "ban-outline"} 
+                    name={review?.status === 'hidden' ? "eye-off" : "eye"} 
                     size={24} 
-                    color={review?.status === 'taken' ? colors.warning : colors.textSecondary} 
+                    color={review?.status === 'hidden' ? colors.warning : colors.textSecondary} 
                   />
                 </Pressable>
               </View>
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: 4,
   },
-  takenBtn: {
+  hiddenBtn: {
     width: 48,
     height: 48,
     borderRadius: 24,
