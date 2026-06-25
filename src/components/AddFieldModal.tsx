@@ -29,6 +29,7 @@ const FIELD_TYPES: FieldType[] = [
   'score',
   'boolean',
   'text',
+  'date',
   'link',
   'pictures',
   'beds_baths',

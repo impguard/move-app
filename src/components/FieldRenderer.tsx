@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, Switch, Pressable, Linking, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Switch, Pressable, Linking, StyleSheet, Platform } from 'react-native';
 import { FieldSetting, Review } from '@/types';
 import { ScoreInput } from '@/components/ScoreInput';
 import { PictureField } from '@/components/PictureField';
@@ -465,6 +465,43 @@ export function FieldRenderer({ setting, value, onChange, allReviews = [], total
             ) : null}
           </View>
         );
+
+      case 'date':
+        if (Platform.OS === 'web') {
+          return (
+            <input
+              type="date"
+              style={{
+                borderRadius: 8,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                fontSize: 15,
+                borderWidth: 1,
+                backgroundColor: colors.surfaceSecondary,
+                color: colors.text,
+                borderColor: colors.borderLight,
+                outline: 'none',
+                width: '100%',
+                fontFamily: 'inherit',
+              } as any}
+              value={String(value ?? '')}
+              onChange={(e) => onChange(e.target.value)}
+            />
+          );
+        } else {
+          return (
+            <SyncTextInput
+              style={[
+                styles.textInput,
+                { backgroundColor: colors.surfaceSecondary, color: colors.text, borderColor: colors.borderLight },
+              ]}
+              value={value}
+              onChange={onChange}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={colors.textTertiary}
+            />
+          );
+        }
 
       case 'pictures':
         return (

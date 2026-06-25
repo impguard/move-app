@@ -32,6 +32,7 @@ const FIELD_TYPES: FieldType[] = [
   'boolean',
   'strict_boolean',
   'text',
+  'date',
   'link',
   'pictures',
   'beds_baths',

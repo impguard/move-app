@@ -11,7 +11,8 @@ export type FieldType =
   | 'pictures'
   | 'sqft'
   | 'strict_boolean'
-  | 'beds_baths';
+  | 'beds_baths'
+  | 'date';
 
 export interface FieldSetting {
   id: string;
@@ -57,6 +58,7 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   'link': 'Link',
   'pictures': 'Pictures',
   'beds_baths': 'Beds / Baths',
+  'date': 'Date',
 };
 
 export function getDefaultValue(type: FieldType): unknown {
@@ -67,6 +69,7 @@ export function getDefaultValue(type: FieldType): unknown {
     case 'address':
     case 'text':
     case 'link':
+    case 'date':
       return '';
     case 'dollar':
     case 'number':
