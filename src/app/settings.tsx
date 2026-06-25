@@ -420,7 +420,7 @@ export default function SettingsScreen() {
                 <Text style={[styles.dataDesc, { color: colors.textSecondary }]}>If you've installed this app to your home screen and it hasn't automatically picked up a new update, you can force it here.</Text>
 
                 <Pressable style={[styles.dataBtn, { backgroundColor: colors.primaryLight, alignSelf: 'flex-start', paddingHorizontal: spacing.xl }]} onPress={() => {
-                  window.location.href = window.location.pathname + '?v=' + new Date().getTime();
+                  window.location.href = '/move-app/?v=' + new Date().getTime();
                 }}>
                   <Text style={[styles.dataBtnText, { color: colors.primary }]}>Check for Updates</Text>
                 </Pressable>
